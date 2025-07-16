@@ -11,11 +11,16 @@ st.title("🔐 Generador de Código QR para usuarios semilla")
 st.write("Complete la información y genere un código QR")
 
 # === Formulario ===
+# Detectar si viene desde ERSI
+valor_por_defecto = st.session_state.get("ultimo_ersi", "")
+
+# Formulario QR
 with st.form("qr_form"):
-    texto_qr = st.text_input("Ingrese el código del usuario semilla", "")
+    texto_qr = st.text_input("Código del usuario semilla (ERSI)", value=valor_por_defecto)
     texto_variable = st.text_input("Nombre de la clínica o lugar", "")
 
     generar = st.form_submit_button("Generar Código QR")
+
 
 if generar and texto_qr and texto_variable:
     # Texto fijo
