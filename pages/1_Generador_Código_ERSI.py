@@ -65,7 +65,9 @@ if st.session_state["registro"]:
 
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name="CodigosERSI")
+        # Exportar excluyendo "Código ERSI Base"
+        df.drop(columns=["Código ERSI Base"]).to_excel(writer, index=False, sheet_name="CodigosERSI")
+    buffer.seek(0)
 
     st.download_button(
         label="⬇️ Descargar Excel",
@@ -73,5 +75,6 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 
