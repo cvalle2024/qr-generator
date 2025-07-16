@@ -6,15 +6,22 @@ st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
-# Inicializar historial en memoria
+# Inicializar historial
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
-# Definir claves para cada campo (permite control manual)
+# Claves para los widgets
 clave_iniciales = "iniciales_input"
 clave_dia = "dia_input"
 clave_mes = "mes_input"
 clave_sexo = "sexo_input"
+
+# === Función para limpiar formulario ===
+def limpiar_formulario():
+    st.session_state[clave_iniciales] = ""
+    st.session_state[clave_dia] = 1
+    st.session_state[clave_mes] = "ene"
+    st.session_state[clave_sexo] = "Hombre"
 
 # === Formulario ===
 with st.form("ersi_formulario"):
@@ -27,6 +34,7 @@ with st.form("ersi_formulario"):
 
     generar = st.form_submit_button("Generar Código ERSI")
 
+# === Procesar al enviar ===
 if generar:
     if iniciales and sexo and dia and mes:
         dia_str = f"{int(dia):02}"
@@ -50,16 +58,13 @@ if generar:
         st.success("✅ Código generado exitosamente")
         st.code(codigo_base, language="text")
 
-        # 🧹 Limpieza del formulario (sin borrar keys)
-        st.session_state[clave_iniciales] = ""
-        st.session_state[clave_dia] = 1
-        st.session_state[clave_mes] = "ene"
-        st.session_state[clave_sexo] = "Hombre"
+        # 🧹 Limpiar formulario usando callback segura
+        limpiar_formulario()
 
     else:
         st.error("Por favor, complete todos los campos.")
 
-# Mostrar historial
+# === Mostrar historial ===
 if st.session_state["registro"]:
     st.markdown("### 📋 Códigos generados")
     df = pd.DataFrame(st.session_state["registro"])
