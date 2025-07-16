@@ -16,13 +16,6 @@ clave_dia = "dia_input"
 clave_mes = "mes_input"
 clave_sexo = "sexo_input"
 
-# === Función para limpiar formulario ===
-def limpiar_formulario():
-    st.session_state[clave_iniciales] = ""
-    st.session_state[clave_dia] = 1
-    st.session_state[clave_mes] = "ene"
-    st.session_state[clave_sexo] = "Hombre"
-
 # === Formulario ===
 with st.form("ersi_formulario"):
     iniciales = st.text_input("Iniciales del Nombre (ej. LMOC)", key=clave_iniciales)
@@ -58,8 +51,8 @@ if generar:
         st.success("✅ Código generado exitosamente")
         st.code(codigo_base, language="text")
 
-        # 🧹 Limpiar formulario usando callback segura
-        limpiar_formulario()
+        # Guardar en sesión para QR
+        st.session_state["ultimo_ersi"] = codigo_base
 
     else:
         st.error("Por favor, complete todos los campos.")
