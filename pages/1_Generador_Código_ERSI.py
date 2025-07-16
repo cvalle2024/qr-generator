@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 
+st.session_state["ultimo_ersi"] = codigo_base
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
