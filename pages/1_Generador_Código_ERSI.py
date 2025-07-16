@@ -10,21 +10,11 @@ st.write("Complete el formulario para generar un código único por usuario.")
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
-# Inicializar campos del formulario si no existen
-for var, val in {
-    "iniciales_input": "",
-    "dia_input": 1,
-    "mes_input": "ene",
-    "sexo_input": "Hombre"
-}.items():
-    if var not in st.session_state:
-        st.session_state[var] = val
-
 # === Formulario ===
 with st.form("ersi_formulario"):
     iniciales = st.text_input("Iniciales del Nombre (ej. LMOC)", key="iniciales_input")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1, key="dia_input")
-    mes = st.selectbox("Mes de nacimiento", 
+    mes = st.selectbox("Mes de nacimiento",
                        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"],
                        key="mes_input")
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"], key="sexo_input")
@@ -55,11 +45,13 @@ if generar:
         st.code(codigo_base, language="text")
         st.session_state["ultimo_ersi"] = codigo_base
 
-        # 🧹 Limpiar formulario
+        # 🧹 Limpiar formulario y recargar
         st.session_state["iniciales_input"] = ""
         st.session_state["dia_input"] = 1
         st.session_state["mes_input"] = "ene"
         st.session_state["sexo_input"] = "Hombre"
+        st.experimental_rerun()
+
     else:
         st.error("Por favor, complete todos los campos.")
 
