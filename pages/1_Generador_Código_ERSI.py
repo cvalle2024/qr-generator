@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import io
 
-st.session_state["ultimo_ersi"] = codigo_base
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
@@ -60,9 +59,11 @@ if st.session_state["registro"]:
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name="CodigosERSI")
 
+    buffer.seek(0)  # Reiniciar buffer antes de la descarga
+
     st.download_button(
         label="⬇️ Descargar Excel",
-        data=buffer.getvalue(),
+        data=buffer,
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
