@@ -45,31 +45,13 @@ if generar:
         st.code(codigo_base, language="text")
         st.session_state["ultimo_ersi"] = codigo_base
 
-        # 🧹 Limpiar formulario y recargar
-        st.session_state["iniciales_input"] = ""
-        st.session_state["dia_input"] = 1
-        st.session_state["mes_input"] = "ene"
-        st.session_state["sexo_input"] = "Hombre"
+        # 🧹 Limpiar campos (solo si están definidos)
+        for key in ["iniciales_input", "dia_input", "mes_input", "sexo_input"]:
+            if key in st.session_state:
+                del st.session_state[key]
+
         st.experimental_rerun()
 
     else:
         st.error("Por favor, complete todos los campos.")
-
-# Mostrar historial generado
-if st.session_state["registro"]:
-    st.markdown("### 📋 Códigos generados")
-    df = pd.DataFrame(st.session_state["registro"])
-    st.dataframe(df, use_container_width=True)
-
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="CodigosERSI")
-    buffer.seek(0)
-
-    st.download_button(
-        label="⬇️ Descargar Excel",
-        data=buffer,
-        file_name="codigos_ersi.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
 
