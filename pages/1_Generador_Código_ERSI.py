@@ -63,7 +63,7 @@ if st.session_state["registro"]:
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name="CodigosERSI")
-        writer.save()
+       
 
     st.download_button(
         label="⬇️ Descargar Excel",
