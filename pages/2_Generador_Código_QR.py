@@ -17,14 +17,14 @@ valor_por_defecto = st.session_state.get("ultimo_ersi", "")
 # Formulario QR
 with st.form("qr_form"):
     texto_qr = st.text_input("Código del usuario semilla (ERSI)", value=valor_por_defecto)
-    texto_variable = st.text_input("Nombre de la clínica o lugar", "")
+    texto_variable = st.text_input("Nombre de la clínica y contacto", "")
 
     generar = st.form_submit_button("Generar Código QR")
 
 
 if generar and texto_qr and texto_variable:
     # Texto fijo
-    texto_fijo = "Este cupón expirará en cuatro semanas después de su emisión. Debe presentarlo al acercarse a la clínica o lugar:"
+    texto_fijo = "Este cupón es valido en cuatro semanas después de su emisión. Debe presentarlo al acercarse a la clínica o lugar:"
 
     # Crear el código QR
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
