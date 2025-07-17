@@ -11,7 +11,8 @@ st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
 # === CARGAR MAPEO DE UBICACIONES ===
-data = pd.read_csv("https://raw.githubusercontent.com/cvalle/ersi-app/main/centros_salud_ersi.csv")
+data = pd.read_csv("https://raw.githubusercontent.com/cvalle2024/qr-generator/main/centros_salud_ersi.csv")
+
 
 
 # === OBTENER LISTAS DE PAÍSES, DEPARTAMENTOS Y SERVICIOS ===
