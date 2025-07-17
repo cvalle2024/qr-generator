@@ -8,7 +8,7 @@ from google.oauth2.service_account import Credentials
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
-    st.secrets["google_service_account"],
+    json.loads(st.secrets["google_sheets"]["gcp_service_account"]),
     scopes=scope
 )
 client = gspread.authorize(creds)
@@ -18,7 +18,7 @@ sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # === CONFIGURACIÓN STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
-st.title("🧾 Generador de Código ERSI para usuarios semilla")
+st.title("📟 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
 # Inicializar almacenamiento local
@@ -97,5 +97,6 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 
