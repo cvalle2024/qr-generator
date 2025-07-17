@@ -1,12 +1,16 @@
-import pandas as pd
+import os
 import chardet
+import pandas as pd
 
-# Detectar automáticamente la codificación del archivo CSV
-csv_path = "/mnt/data/centros_salud_ersi.csv"
+# === Cargar CSV desde el directorio raíz del proyecto ===
+csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "centros_salud_ersi.csv")
 
+# Detectar el encoding del archivo para evitar errores
 with open(csv_path, 'rb') as f:
-    result = chardet.detect(f.read())
-    encoding_detected = result['encoding']
+    rawdata = f.read()
+    encoding = chardet.detect(rawdata)['encoding']
+
+data = pd.read_csv(csv_path, encoding=encoding)
 
 # Leer el archivo CSV usando la codificación detectada
 data = pd.read_csv(csv_path, encoding=encoding_detected)
