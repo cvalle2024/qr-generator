@@ -35,7 +35,7 @@ if "registro" not in st.session_state:
 with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
     pais_filtrado = pais_mostrado.strip().lower()
-    df_filtrado_pais = df_centros[df_centros["País"] == pais_filtrado]
+    df_filtrado_pais = df_centros[df_centros["País"].str.lower().str.strip() == pais_filtrado]
 
     departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
     departamento = st.selectbox("Departamento", departamentos)
@@ -54,7 +54,7 @@ if generar:
     if iniciales and sexo and dia and mes and (15 <= edad <= 100):
         dia_str = f"{int(dia):02}"
         mes_upper = mes.upper()
-        sexo_code = "H" if sexo == "Hombre" else "M"
+        sexo_code = "HO" if sexo == "Hombre" else "MU"
         base = f"{iniciales.upper()}{dia_str}{mes_upper}{sexo_code}"
 
         try:
@@ -110,5 +110,6 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 
