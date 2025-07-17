@@ -15,9 +15,9 @@ with st.form("ersi_formulario"):
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
-    edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
-
+    edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
+    
     generar = st.form_submit_button("Generar Código ERSI")
 
 if generar:
