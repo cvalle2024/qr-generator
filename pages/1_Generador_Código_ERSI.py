@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 import gspread
-import json
 import io
 from google.oauth2.service_account import Credentials
 
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
-     st.secrets["google_service_account"],
+    st.secrets["google_service_account"],  # ← usamos solo este bloque
     scopes=scope
 )
 client = gspread.authorize(creds)
@@ -16,16 +15,16 @@ SHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
 SHEET_NAME = st.secrets["google_sheets"]["sheet_name"]
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
-# === CONFIGURACIÓN STREAMLIT ===
+# === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
-st.title("📟 Generador de Código ERSI para usuarios semilla")
+st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
-# Inicializar almacenamiento local
+# === MEMORIA LOCAL DE STREAMLIT ===
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
-# === FORMULARIO ===
+# === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
@@ -48,7 +47,7 @@ if generar:
             st.error(f"No se pudo leer la hoja: {e}")
             existing_data = pd.DataFrame()
 
-        # Verificar ocurrencias para evitar duplicados
+        # Verificar si el código base ya existe
         if not existing_data.empty and "Código ERSI Único" in existing_data.columns:
             ocurrencias = existing_data["Código ERSI Único"].str.contains(base, na=False).sum()
         else:
@@ -57,7 +56,7 @@ if generar:
         sufijo = f"-{ocurrencias + 1:03}"
         codigo_ersi = base + sufijo
 
-        # Registrar en memoria local
+        # Registrar en memoria
         nuevo = {
             "Iniciales": iniciales.upper(),
             "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
@@ -67,7 +66,7 @@ if generar:
         }
         st.session_state["registro"].append(nuevo)
 
-        # Registrar en Google Sheets
+        # Guardar en Google Sheets
         try:
             sheet.append_row(list(nuevo.values()))
             st.success("✅ Código generado y guardado exitosamente")
@@ -76,19 +75,18 @@ if generar:
 
         st.code(codigo_ersi, language="text")
         st.session_state["ultimo_ersi"] = codigo_ersi
-
     else:
         st.error("Por favor, complete todos los campos correctamente.")
 
-# Mostrar historial generado
+# === TABLA Y DESCARGA ===
 if st.session_state["registro"]:
     st.markdown("### 📋 Códigos generados en esta sesión")
     df = pd.DataFrame(st.session_state["registro"])
     st.dataframe(df, use_container_width=True)
 
-    # Descargar Excel
+    # Exportar a Excel
     buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         df.to_excel(writer, index=False, sheet_name="CodigosERSI")
 
     st.download_button(
