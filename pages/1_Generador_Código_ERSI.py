@@ -35,11 +35,9 @@ if "registro" not in st.session_state:
 with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
     pais_filtrado = pais_mostrado.strip().lower()
-    st.write("País seleccionado:", pais_mostrado)
-    st.write("País filtrado:", pais_filtrado)
-    st.write("Países en el DataFrame:", df_centros["País"].unique())
 
-    df_filtrado_pais = df_centros[df_centros["País"] == pais_filtrado]
+    # Reasignamos el valor seleccionado para evitar desincronización
+    df_filtrado_pais = df_centros[df_centros["País"].str.lower() == pais_filtrado]
 
     if df_filtrado_pais.empty:
         st.warning("⚠️ No se encontraron registros para este país.")
