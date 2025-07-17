@@ -17,9 +17,10 @@ sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # === CARGA DE DATOS DE CENTROS DE SALUD ===
 df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
-df_centros["País"] = df_centros["País"].astype(str).str.strip().str.lower()
+df_centros["País"] = df_centros["País"].astype(str).str.strip()
 df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip()
-paises = sorted(df_centros["País"].str.title().dropna().unique())
+df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip()
+paises = sorted(df_centros["País"].dropna().unique())
 
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
@@ -33,8 +34,7 @@ if "registro" not in st.session_state:
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
-    pais_filtrado = pais_mostrado.strip().lower()
-    df_filtrado_pais = df_centros[df_centros["País"] == pais_filtrado]
+    df_filtrado_pais = df_centros[df_centros["País"] == pais_mostrado]
 
     departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
     departamento = st.selectbox("Departamento", departamentos)
