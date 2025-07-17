@@ -20,7 +20,7 @@ df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
 df_centros["País"] = df_centros["País"].astype(str).str.strip().str.lower()
 df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip()
 df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip()
-paises = sorted(df_centros["País"].str.title().dropna().unique())
+paises = sorted(df_centros["País"].dropna().str.title().unique())
 
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
@@ -36,7 +36,7 @@ with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
     pais_filtrado = pais_mostrado.strip().lower()
 
-    df_filtrado_pais = df_centros[df_centros["País"].str.lower().str.strip() == pais_filtrado]
+    df_filtrado_pais = df_centros[df_centros["País"].str.strip().str.lower() == pais_filtrado]
 
     if df_filtrado_pais.empty:
         st.warning("⚠️ No se encontraron registros para este país.")
@@ -91,7 +91,16 @@ if generar:
         st.session_state["registro"].append(nuevo)
 
         try:
-            sheet.append_row([nuevo[col] for col in ["País", "Departamento", "Servicio de Salud", "Iniciales", "Fecha de Nacimiento", "Sexo", "Edad", "Código ERSI Único"]])
+            sheet.append_row([
+                nuevo["País"],
+                nuevo["Departamento"],
+                nuevo["Servicio de Salud"],
+                nuevo["Iniciales"],
+                nuevo["Fecha de Nacimiento"],
+                nuevo["Sexo"],
+                nuevo["Edad"],
+                nuevo["Código ERSI Único"]
+            ])
             st.success("✅ Código generado y guardado exitosamente")
         except Exception as e:
             st.warning(f"Código generado, pero no se pudo guardar en Google Sheets: {e}")
