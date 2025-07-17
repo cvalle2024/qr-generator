@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import gspread
 import io
-import unicodedata
 from google.oauth2.service_account import Credentials
 
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
@@ -16,26 +15,13 @@ SHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
 SHEET_NAME = st.secrets["google_sheets"]["sheet_name"]
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
-# === FUNCIÓN DE NORMALIZACIÓN ===
-def normalizar(texto):
-    if pd.isna(texto):
-        return ""
-    texto = str(texto).strip()
-    texto = unicodedata.normalize('NFD', texto)
-    texto = "".join(c for c in texto if unicodedata.category(c) != 'Mn')  # elimina tildes
-    return texto.lower()
-
 # === CARGA DE DATOS DE CENTROS DE SALUD ===
 df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
+
+# Limpiar espacios y formatear campos
 df_centros["País"] = df_centros["País"].astype(str).str.strip()
 df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip().str.title()
 df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip().str.title()
-df_centros["pais_norm"] = df_centros["País"].apply(normalizar)
-df_centros["depto_norm"] = df_centros["Departamento"].apply(normalizar)
-
-# Diccionarios visibles ↔ normalizados
-paises_dict = {p: normalizar(p) for p in sorted(df_centros["País"].dropna().unique())}
-paises_visibles = list(paises_dict.keys())
 
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
@@ -50,26 +36,15 @@ with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", sorted(df_centros["País"].unique()))
     df_filtrado_pais = df_centros[df_centros["País"] == pais_mostrado]
 
-
-    df_filtrado_pais = df_centros[df_centros["pais_norm"] == pais_filtrado]
-
-    if df_filtrado_pais.empty:
-        st.warning(f"No se encontraron departamentos para el país: {pais_mostrado}")
-        departamentos_visibles = []
-    else:
-        departamentos_visibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
-        depto_dict = {d: normalizar(d) for d in departamentos_visibles}
-
-    departamento = st.selectbox("Departamento", departamentos_visibles) if departamentos_visibles else ""
+    departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
+    departamento = st.selectbox("Departamento", departamentos) if departamentos else ""
 
     if departamento:
-        depto_filtrado = depto_dict[departamento]
-        df_filtrado_depto = df_filtrado_pais[df_filtrado_pais["depto_norm"] == depto_filtrado]
-        sitios_filtrados = df_filtrado_depto["Nombre del Sitio"].dropna().unique()
+        sitios = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento]["Nombre del Sitio"].dropna().unique()
     else:
-        sitios_filtrados = []
+        sitios = []
 
-    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios_filtrados)) if sitios_filtrados.size > 0 else ""
+    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios)) if len(sitios) > 0 else ""
 
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
