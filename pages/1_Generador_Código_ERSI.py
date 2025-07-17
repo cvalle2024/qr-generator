@@ -35,6 +35,10 @@ if "registro" not in st.session_state:
 with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
     pais_filtrado = pais_mostrado.strip().lower()
+    st.write("País seleccionado:", pais_mostrado)
+    st.write("País filtrado:", pais_filtrado)
+    st.write("Países en el DataFrame:", df_centros["País"].unique())
+
     df_filtrado_pais = df_centros[df_centros["País"].str.lower().str.strip() == pais_filtrado]
 
     departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
@@ -110,6 +114,4 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
 
