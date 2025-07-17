@@ -5,3 +5,4 @@ qrcode
 Pillow
 gspread
 oauth2client
+chardet
