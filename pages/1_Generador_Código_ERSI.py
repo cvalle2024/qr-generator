@@ -1,14 +1,19 @@
 import streamlit as st
 import pandas as pd
 import io
+import os
+
+ARCHIVO_CSV = "ersi_registros.csv"
+
+# Leer el archivo persistente si existe
+if os.path.exists(ARCHIVO_CSV):
+    df_historial = pd.read_csv(ARCHIVO_CSV)
+else:
+    df_historial = pd.DataFrame(columns=["Iniciales", "Fecha de Nacimiento", "Sexo", "Edad", "Código ERSI Único"])
 
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
-
-# Inicializar almacenamiento en sesión
-if "registro" not in st.session_state:
-    st.session_state["registro"] = []
 
 # === Formulario ===
 with st.form("ersi_formulario"):
@@ -25,41 +30,38 @@ if generar:
         dia_str = f"{int(dia):02}"
         mes_upper = mes.upper()
         sexo_code = "HO" if sexo == "Hombre" else "MU"
-
+        
         base = f"{iniciales.upper()}{dia_str}{mes_upper}{sexo_code}"
-        ocurrencias = sum(1 for reg in st.session_state["registro"] if base in reg["Código ERSI Base"])
+        ocurrencias = sum(base in cod for cod in df_historial["Código ERSI Único"])
         sufijo = f"-{ocurrencias + 1:03}"
         codigo_base = base + sufijo
 
-        # Guardar en memoria
-        nuevo = {
-            "Iniciales": iniciales.upper(),
-            "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
-            "Sexo": sexo,
-            "Edad": edad,
-            "Código ERSI Base": codigo_base,
-            "Código ERSI Único": codigo_base
-        }
-        st.session_state["registro"].append(nuevo)
+        if codigo_base in df_historial["Código ERSI Único"].values:
+            st.warning(f"⚠️ El código {codigo_base} ya fue registrado previamente.")
+        else:
+            nuevo = {
+                "Iniciales": iniciales.upper(),
+                "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
+                "Sexo": sexo,
+                "Edad": edad,
+                "Código ERSI Único": codigo_base
+            }
+            df_historial = pd.concat([df_historial, pd.DataFrame([nuevo])], ignore_index=True)
+            df_historial.to_csv(ARCHIVO_CSV, index=False)
 
-        # Mostrar resultado
-        st.success("✅ Código generado exitosamente")
-        st.code(codigo_base, language="text")
-        st.session_state["ultimo_ersi"] = codigo_base  # Para usarlo en QR si se desea
-
+            st.success("✅ Código generado exitosamente")
+            st.code(codigo_base, language="text")
     else:
         st.error("Por favor, complete todos los campos correctamente.")
 
-# Mostrar historial generado
-if st.session_state["registro"]:
+# Mostrar historial
+if not df_historial.empty:
     st.markdown("### 📋 Códigos generados")
-    df = pd.DataFrame(st.session_state["registro"])
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df_historial, use_container_width=True)
 
-    # Descargar como Excel (sin la columna "Código ERSI Base")
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df.drop(columns=["Código ERSI Base"]).to_excel(writer, index=False, sheet_name="CodigosERSI")
+        df_historial.to_excel(writer, index=False, sheet_name="CodigosERSI")
 
     st.download_button(
         label="⬇️ Descargar Excel",
