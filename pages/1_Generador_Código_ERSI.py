@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 import io
+import unicodedata
 from google.oauth2.service_account import Credentials
 
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
@@ -15,54 +16,66 @@ SHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
 SHEET_NAME = st.secrets["google_sheets"]["sheet_name"]
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
+# === FUNCIÓN DE NORMALIZACIÓN ===
+def normalizar(texto):
+    if pd.isna(texto):
+        return ""
+    texto = str(texto).strip()
+    texto = unicodedata.normalize('NFD', texto)
+    texto = "".join(c for c in texto if unicodedata.category(c) != 'Mn')  # elimina tildes
+    return texto.lower()
+
 # === CARGA DE DATOS DE CENTROS DE SALUD ===
 df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
 df_centros["País"] = df_centros["País"].astype(str).str.strip()
 df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip().str.title()
 df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip().str.title()
-df_centros["País_normalizado"] = df_centros["País"].str.strip().str.lower()
+df_centros["pais_norm"] = df_centros["País"].apply(normalizar)
+df_centros["depto_norm"] = df_centros["Departamento"].apply(normalizar)
 
-paises_dict = {p.strip(): p.strip().lower() for p in df_centros["País"].dropna().unique()}
-paises = sorted(paises_dict.keys())
+# Diccionarios visibles ↔ normalizados
+paises_dict = {p: normalizar(p) for p in sorted(df_centros["País"].dropna().unique())}
+paises_visibles = list(paises_dict.keys())
 
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 st.title("📟 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
-# === MEMORIA LOCAL DE STREAMLIT ===
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
-    pais_mostrado = st.selectbox("País", paises)
-    pais_filtrado = paises_dict[pais_mostrado.strip()]
+    pais_mostrado = st.selectbox("País", paises_visibles)
+    pais_filtrado = paises_dict[pais_mostrado]
 
-    df_centros_filtrados = df_centros[df_centros["País_normalizado"] == pais_filtrado]
+    df_filtrado_pais = df_centros[df_centros["pais_norm"] == pais_filtrado]
 
-    if df_centros_filtrados.empty:
-        st.warning(f"⚠️ No se encontraron registros para el país seleccionado: {pais_mostrado}")
-        st.info(f"País buscado (normalizado): '{pais_filtrado}'")
-        st.dataframe(df_centros[["País", "País_normalizado"]].drop_duplicates().reset_index(drop=True))
-        departamentos = []
+    if df_filtrado_pais.empty:
+        st.warning(f"No se encontraron departamentos para el país: {pais_mostrado}")
+        departamentos_visibles = []
     else:
-        departamentos = sorted(df_centros_filtrados["Departamento"].dropna().unique())
+        departamentos_visibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
+        depto_dict = {d: normalizar(d) for d in departamentos_visibles}
 
-    departamento = st.selectbox("Departamento", departamentos) if departamentos else ""
+    departamento = st.selectbox("Departamento", departamentos_visibles) if departamentos_visibles else ""
 
     if departamento:
-        sitios_filtrados = df_centros_filtrados[df_centros_filtrados["Departamento"] == departamento]["Nombre del Sitio"].dropna().unique()
+        depto_filtrado = depto_dict[departamento]
+        df_filtrado_depto = df_filtrado_pais[df_filtrado_pais["depto_norm"] == depto_filtrado]
+        sitios_filtrados = df_filtrado_depto["Nombre del Sitio"].dropna().unique()
     else:
         sitios_filtrados = []
 
-    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios_filtrados)) if len(sitios_filtrados) > 0 else ""
+    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios_filtrados)) if sitios_filtrados.size > 0 else ""
 
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
     edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
+
     generar = st.form_submit_button("Generar Código ERSI")
 
 if generar:
@@ -115,7 +128,6 @@ if generar:
             st.warning(f"Código generado, pero no se pudo guardar en Google Sheets: {e}")
 
         st.code(codigo_ersi, language="text")
-        st.session_state["ultimo_ersi"] = codigo_ersi
     else:
         st.error("Por favor, complete todos los campos correctamente.")
 
@@ -135,3 +147,4 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
