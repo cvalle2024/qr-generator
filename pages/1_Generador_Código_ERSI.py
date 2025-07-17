@@ -36,17 +36,22 @@ with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
     pais_filtrado = pais_mostrado.strip().lower()
 
-    df_filtrado_pais = df_centros[df_centros["País"].str.strip().str.lower() == pais_filtrado]
+    # Filtrado estandarizado
+    df_centros_filtrados = df_centros[df_centros["País"].str.strip().str.lower() == pais_filtrado]
 
-    if df_filtrado_pais.empty:
+    if df_centros_filtrados.empty:
         st.warning("⚠️ No se encontraron registros para este país.")
         departamentos = []
     else:
-        departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
+        departamentos = sorted(df_centros_filtrados["Departamento"].dropna().unique())
 
     departamento = st.selectbox("Departamento", departamentos) if departamentos else ""
 
-    sitios_filtrados = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento]["Nombre del Sitio"].dropna().unique()
+    if departamento:
+        sitios_filtrados = df_centros_filtrados[df_centros_filtrados["Departamento"] == departamento]["Nombre del Sitio"].dropna().unique()
+    else:
+        sitios_filtrados = []
+
     servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios_filtrados)) if len(sitios_filtrados) > 0 else ""
 
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
@@ -126,5 +131,3 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
