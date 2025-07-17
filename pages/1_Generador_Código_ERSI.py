@@ -10,7 +10,13 @@ SHEET_ID = "1V1zrEYSj51BqRD9dkehjOHp2rglB3NwyIamTN4iPMCc"
 SHEET_NAME = "Registros"
 
 # === CONEXIÓN A GOOGLE SHEETS ===
-creds = Credentials.from_service_account_file("/mnt/data/registrosersi-8b3f7cc1c416.json", scopes=SCOPE)
+from google.oauth2.service_account import Credentials
+
+creds = Credentials.from_service_account_info(
+    st.secrets["google_service_account"],
+    scopes=SCOPE
+)
+
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
