@@ -36,8 +36,7 @@ with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
     pais_filtrado = pais_mostrado.strip().lower()
 
-    # Reasignamos el valor seleccionado para evitar desincronización
-    df_filtrado_pais = df_centros[df_centros["País"].str.lower() == pais_filtrado]
+    df_filtrado_pais = df_centros[df_centros["País"].str.lower().str.strip() == pais_filtrado]
 
     if df_filtrado_pais.empty:
         st.warning("⚠️ No se encontraron registros para este país.")
@@ -88,10 +87,11 @@ if generar:
             "Edad": edad,
             "Código ERSI Único": codigo_ersi
         }
+
         st.session_state["registro"].append(nuevo)
 
         try:
-            sheet.append_row(list(nuevo.values()))
+            sheet.append_row([nuevo[col] for col in ["País", "Departamento", "Servicio de Salud", "Iniciales", "Fecha de Nacimiento", "Sexo", "Edad", "Código ERSI Único"]])
             st.success("✅ Código generado y guardado exitosamente")
         except Exception as e:
             st.warning(f"Código generado, pero no se pudo guardar en Google Sheets: {e}")
@@ -117,3 +117,4 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
