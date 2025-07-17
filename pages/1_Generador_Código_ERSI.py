@@ -12,6 +12,8 @@ st.write("Complete el formulario para generar un código único por usuario.")
 
 # === CARGAR MAPEO DE UBICACIONES ===
 data = pd.read_csv("https://raw.githubusercontent.com/cvalle2024/qr-generator/main/centros_salud_ersi.csv")
+st.write("🧪 Columnas detectadas en el archivo:", data.columns.tolist())
+data.columns = data.columns.str.strip()
 
 
 
