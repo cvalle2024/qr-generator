@@ -20,7 +20,10 @@ df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
 df_centros["País"] = df_centros["País"].astype(str).str.strip().str.lower()
 df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip()
 df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip()
-paises = sorted(df_centros["País"].dropna().str.title().unique())
+df_centros["País_normalizado"] = df_centros["País"].str.strip().str.lower()
+
+paises_dict = {p.title(): p.strip().lower() for p in df_centros["País"].dropna().unique()}
+paises = sorted(paises_dict.keys())
 
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
@@ -34,10 +37,9 @@ if "registro" not in st.session_state:
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
-    pais_filtrado = pais_mostrado.strip().lower()
+    pais_filtrado = paises_dict[pais_mostrado]
 
-    # Filtrado estandarizado
-    df_centros_filtrados = df_centros[df_centros["País"].str.strip().str.lower() == pais_filtrado]
+    df_centros_filtrados = df_centros[df_centros["País_normalizado"] == pais_filtrado]
 
     if df_centros_filtrados.empty:
         st.warning("⚠️ No se encontraron registros para este país.")
