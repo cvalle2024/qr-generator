@@ -5,12 +5,14 @@ import pandas as pd
 # === Cargar CSV desde el directorio raíz del proyecto ===
 csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "centros_salud_ersi.csv")
 
-# Detectar el encoding del archivo para evitar errores
+# Detectar el encoding del archivo
 with open(csv_path, 'rb') as f:
     rawdata = f.read()
     encoding = chardet.detect(rawdata)['encoding']
 
+# Leer el CSV con el encoding detectado
 data = pd.read_csv(csv_path, encoding=encoding)
+
 
 # Leer el archivo CSV usando la codificación detectada
 data = pd.read_csv(csv_path, encoding=encoding_detected)
