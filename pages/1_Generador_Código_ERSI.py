@@ -127,3 +127,4 @@ if st.session_state["registro"]:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+
