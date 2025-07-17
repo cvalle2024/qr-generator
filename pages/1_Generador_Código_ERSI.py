@@ -17,8 +17,6 @@ sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # === CARGA DE DATOS DE CENTROS DE SALUD ===
 df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
-
-# Limpiar espacios y formatear campos
 df_centros["País"] = df_centros["País"].astype(str).str.strip()
 df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip().str.title()
 df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip().str.title()
@@ -34,31 +32,23 @@ if "registro" not in st.session_state:
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
 
-    st.subheader("🔍 Diagnóstico de selección")
+    # País
+    paises_disponibles = sorted(df_centros["País"].dropna().unique())
+    pais_seleccionado = st.selectbox("País", paises_disponibles, key="pais")
+    st.markdown(f"🔍 País seleccionado: `{pais_seleccionado}`")
+    df_filtrado_pais = df_centros[df_centros["País"] == pais_seleccionado]
 
-    # 1. País
-    pais_mostrado = st.selectbox("País", sorted(df_centros["País"].unique()))
-    df_filtrado_pais = df_centros[df_centros["País"] == pais_mostrado]
+    # Departamento
+    departamentos_disponibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
+    departamento_seleccionado = st.selectbox("Departamento", departamentos_disponibles, key="depto")
+    st.markdown(f"🏙️ Departamento seleccionado: `{departamento_seleccionado}`")
 
-    st.markdown(f"**País seleccionado:** `{pais_mostrado}`")
-    st.markdown(f"**Departamentos disponibles para `{pais_mostrado}`:**")
-    st.write(df_filtrado_pais["Departamento"].unique())
+    # Sitio
+    df_filtrado_depto = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento_seleccionado]
+    sitios_disponibles = sorted(df_filtrado_depto["Nombre del Sitio"].dropna().unique())
+    servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles, key="sitio")
 
-    departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
-    departamento = st.selectbox("Departamento", departamentos) if departamentos else ""
-
-    # 2. Departamento → Sitios
-    if departamento:
-        sitios = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento]["Nombre del Sitio"].dropna().unique()
-    else:
-        sitios = []
-
-    st.markdown(f"**Departamento seleccionado:** `{departamento}`")
-    st.markdown("**Sitios disponibles:**")
-    st.write(sitios)
-
-    # Resto del formulario
-    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios)) if len(sitios) > 0 else ""
+    # Datos personales
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
@@ -67,7 +57,7 @@ with st.form("ersi_formulario"):
 
     generar = st.form_submit_button("Generar Código ERSI")
 
-
+# === LÓGICA DE GENERACIÓN ===
 if generar:
     if iniciales and sexo and dia and mes and (15 <= edad <= 100):
         dia_str = f"{int(dia):02}"
@@ -90,8 +80,8 @@ if generar:
         codigo_ersi = base + sufijo
 
         nuevo = {
-            "País": pais_mostrado,
-            "Departamento": departamento,
+            "País": pais_seleccionado,
+            "Departamento": departamento_seleccionado,
             "Servicio de Salud": servicio_salud,
             "Iniciales": iniciales.upper(),
             "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
