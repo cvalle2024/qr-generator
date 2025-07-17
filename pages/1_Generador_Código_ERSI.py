@@ -17,12 +17,12 @@ sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # === CARGA DE DATOS DE CENTROS DE SALUD ===
 df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
-df_centros["País"] = df_centros["País"].astype(str).str.strip().str.lower()
-df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip()
-df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip()
+df_centros["País"] = df_centros["País"].astype(str).str.strip()
+df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip().str.title()
+df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip().str.title()
 df_centros["País_normalizado"] = df_centros["País"].str.strip().str.lower()
 
-paises_dict = {p.title(): p.strip().lower() for p in df_centros["País"].dropna().unique()}
+paises_dict = {p.strip(): p.strip().lower() for p in df_centros["País"].dropna().unique()}
 paises = sorted(paises_dict.keys())
 
 # === CONFIGURACIÓN DE STREAMLIT ===
@@ -37,12 +37,14 @@ if "registro" not in st.session_state:
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
     pais_mostrado = st.selectbox("País", paises)
-    pais_filtrado = paises_dict[pais_mostrado]
+    pais_filtrado = paises_dict[pais_mostrado.strip()]
 
     df_centros_filtrados = df_centros[df_centros["País_normalizado"] == pais_filtrado]
 
     if df_centros_filtrados.empty:
-        st.warning("⚠️ No se encontraron registros para este país.")
+        st.warning(f"⚠️ No se encontraron registros para el país seleccionado: {pais_mostrado}")
+        st.info(f"País buscado (normalizado): '{pais_filtrado}'")
+        st.dataframe(df_centros[["País", "País_normalizado"]].drop_duplicates().reset_index(drop=True))
         departamentos = []
     else:
         departamentos = sorted(df_centros_filtrados["Departamento"].dropna().unique())
