@@ -33,19 +33,32 @@ if "registro" not in st.session_state:
 
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
+
+    st.subheader("🔍 Diagnóstico de selección")
+
+    # 1. País
     pais_mostrado = st.selectbox("País", sorted(df_centros["País"].unique()))
     df_filtrado_pais = df_centros[df_centros["País"] == pais_mostrado]
+
+    st.markdown(f"**País seleccionado:** `{pais_mostrado}`")
+    st.markdown(f"**Departamentos disponibles para `{pais_mostrado}`:**")
+    st.write(df_filtrado_pais["Departamento"].unique())
 
     departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
     departamento = st.selectbox("Departamento", departamentos) if departamentos else ""
 
+    # 2. Departamento → Sitios
     if departamento:
         sitios = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento]["Nombre del Sitio"].dropna().unique()
     else:
         sitios = []
 
-    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios)) if len(sitios) > 0 else ""
+    st.markdown(f"**Departamento seleccionado:** `{departamento}`")
+    st.markdown("**Sitios disponibles:**")
+    st.write(sitios)
 
+    # Resto del formulario
+    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios)) if len(sitios) > 0 else ""
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
@@ -53,6 +66,7 @@ with st.form("ersi_formulario"):
     edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
 
     generar = st.form_submit_button("Generar Código ERSI")
+
 
 if generar:
     if iniciales and sexo and dia and mes and (15 <= edad <= 100):
