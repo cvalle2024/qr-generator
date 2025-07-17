@@ -1,35 +1,105 @@
 País,Departamento,Nombre del Sitio
-Honduras,Atlantida,ESM La Ceiba
-Honduras,Atlantida,San Juan Pueblo
-Honduras,Atlantida,Sambo Creek
+Honduras,Atlántida,ESM La Ceiba
+Honduras,Atlántida,San Juan Pueblo
+Honduras,Atlántida,Sambo Creek
 Honduras,Choluteca,Hospital del Sur
 Honduras,Choluteca,El Triunfo
-Honduras,ColÃ³n,Hospital San Isidro
+Honduras,Colón,Hospital San Isidro
 Honduras,Comayagua,Hospital Regional Santa Teresa
-Honduras,Comayagua,Jose MarÃ­a Ochoa
+Honduras,Comayagua,Jose María Ochoa
 Honduras,Comayagua,Episcopal de Siguatepeque
 Honduras,Copán,Hospital de Occidente
-Honduras,Copán,Entrada a CopÃ¡n
+Honduras,Copán,Entrada a Copán
 Honduras,Cortés,(CMO) Miguel Paz Barahona
 Honduras,Cortés,IHSS - San Pedro Sula
 Honduras,Cortés,Episcopal de SPS
-Honduras,El_Paraíso,Hospital Gabriela Alvarado
-Honduras,El_Paraíso,Luis Lazo Arriaga
-Honduras,Francisco_Morazán,Alonso Suazo
-Honduras,Francisco_Morazán,El Manchen
-Honduras,Francisco_Morazán,Las Crucitas
-Honduras,Francisco_Morazán,Hospital Escuela
-Honduras,Francisco_Morazán,IHSS - Tegucigalpa
+Honduras,El Paraíso,Hospital Gabriela Alvarado
+Honduras,El Paraíso,Luis Lazo Arriaga
+Honduras,Francisco Morazán,Alonso Suazo
+Honduras,Francisco Morazán,El Manchen
+Honduras,Francisco Morazán,Las Crucitas
+Honduras,Francisco Morazán,Hospital Escuela
+Honduras,Francisco Morazán,IHSS - Tegucigalpa
 Honduras,Olancho,Hospital San Francisco
 Honduras,Olancho,Policlinico Catacamas
-El_Salvador,La_Libertad,UDS DÃ­az del Pinal
-El_Salvador,La_Libertad,UDS Puerto de la Libertad
-El_Salvador,La_Libertad,UDS Ciudad Arce
-El_Salvador,La_Libertad,UDS Lourdes Colón
-El_Salvador,La_Libertad,UDS Quezaltepeque
-El_Salvador,La_Libertad,UDS San Juan Opico
-El_Salvador,San_Miguel,UDS Periferica San Miguel
-El_Salvador,San_Miguel,UDS La Presita
-El_Salvador,San_Salvador,UDS Zacamil
-El_Salvador,San_Salvador,UDS Unicentro Soyapango
-El_Salvador,San_Salvador,UDS San Miguelito
+El Salvador,La Libertad,UDS Díaz del Pinal
+El Salvador,La Libertad,UDS Puerto de la Libertad
+El Salvador,La Libertad,UDS Ciudad Arce
+El Salvador,La Libertad,UDS Lourdes Colón
+El Salvador,La Libertad,UDS Quezaltepeque
+El Salvador,La Libertad,UDS San Juan Opico
+El Salvador,San Miguel,UDS Periferica San Miguel
+El Salvador,San Miguel,UDS La Presita
+El Salvador,San Salvador,UDS Zacamil
+El Salvador,San Salvador,UDS Unicentro Soyapango
+El Salvador,San Salvador,UDS San Miguelito
+El Salvador,San Salvador,UDS San Martín
+El Salvador,San Salvador,UDS San Marcos
+El Salvador,San Salvador,UDS San Jacinto
+El Salvador,San Salvador,UDS San Antonio Abad
+El Salvador,San Salvador,UDS Monserrat
+El Salvador,San Salvador,UDS Concepción
+El Salvador,San Salvador,UDS Ciudad Delgado
+El Salvador,San Salvador,UDS Barrios
+El Salvador,San Salvador,UDS Apopa 
+El Salvador,San Salvador,UDS Aguilares
+El Salvador,Santa Ana,UDS Tomás Pineda Martínez
+El Salvador,Sonsonate,UDS Sonzacate
+El Salvador,Sonsonate,UDS Sonsonate
+El Salvador,Santa Ana,UDS Santa Bárbara
+El Salvador,Santa Ana,UDS Metapán
+El Salvador,Santa Ana,UDS Chalchuapa
+El Salvador,Santa Ana,UDS Casa del Niño
+El Salvador,Ahuachapán,UDS Atiquizaya
+El Salvador,Ahuachapán,UDS Ahuachapán
+El Salvador,Sonsonate,UDS Acajutla
+El Salvador,Cuscatlán,UDS Cojutepeque
+El Salvador,Cuscatlán,UDS San Rafael Cedros
+El Salvador,La Paz,UDS Santiago Nonualco
+El Salvador,La Unión,UDS La Unión /La Playa
+El Salvador,La Unión,UDS Santa Rosa de Lima
+El Salvador,San Vicente,UDS Periférica San Vicente
+El Salvador,Usulután,UDS Usulután
+Panamá,Bocas del Toro,CTARV Changuinola 
+Panamá,Bocas del Toro,MINSA CAPSI Finca 30
+Panamá,Chiriqui,Centro de Salud San Mateo
+Panamá,Coclé,Hospital Aquilino Tejeira
+Panamá,Colon,Policentro Juan A. Núñez
+Panamá,Herrera,Hospital Cecilio Castillero
+Panamá,Los_Santos,Hospital Anita Moreno
+Panamá,Panamá,Centro de Salud de Santa Ana
+Panamá,Panamá,Centro de Salud del Chorrillo
+Panamá,Panamá,Torrijos Carter
+Panamá,Panamá,S/A Nuevo Veranillo
+Panamá,Panamá,S/A Río Abajo
+Panamá,Panamá,Centro de Salud Chilibre
+Panamá,Panamá Oeste,Centro de Salud Altos de San Francisco
+Panamá,Panamá Oeste,S/A Artemio Jaén
+Panamá,Veraguas,S/A Cantos del Llano
+Panamá,Veraguas,Hospital Chicho Fabregas
+Panamá,Darien,C/S Santa Fé Darien (Clínica TARV)
+Guatemala,Escuintla,Unidad de Atención Diferenciada (Clínica Barcelona)
+Guatemala,Escuintla,CS Santa Lucia Cotzumalguapa
+Guatemala,Guatemala,CAS
+Guatemala,Guatemala,CS Zona 3
+Guatemala,Guatemala,Fundación Marco Antonio
+Guatemala,Guatemala,OTRANS
+Guatemala,Izabal,CS Puerto Barrios
+Guatemala,Izabal,CAP Morales
+Guatemala,Petén,CS Flores
+Guatemala,Quetzaltenango,CS Quetzaltenango
+Guatemala,Quetzaltenango,CS Coatepeque
+Guatemala,Quetzaltenango,CS La Esperanza
+Guatemala,Huehuetenango,Centro de Salud Sur
+Guatemala,Chiquimula,CS Salud Esquipulas
+Guatemala,Alta Verapaz,CS Cobán 
+Guatemala,Izabal,CAP Livingston
+Guatemala,Zacapa,CS Zacapa
+Guatemala,Jutiapa,CS Jutiapa
+Guatemala,Guatemala,Asociación SOMOS
+Nicaragua,Chinandega,SILAIS Chinandega
+Nicaragua,León,SILAIS León
+Nicaragua,Managua,SILAIS Managua
+Nicaragua,Masaya,SILAIS Masaya
+Nicaragua,Chontales,SILAIS Chontales
+Nicaragua,Bilwi,SILAIS Bilwi
