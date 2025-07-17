@@ -24,7 +24,7 @@ with st.form("qr_form"):
 
 if generar and texto_qr and texto_variable:
     # Texto fijo
-    texto_fijo = "Este cupón es valido en cuatro semanas después de su emisión. Debe presentarlo al acercarse a la clínica o lugar:"
+    texto_fijo = "Este cupón es valido en cuatro semanas y si ya se vencio "no te preocupes siempre te atenderán". Debe presentarlo al acercarse a la clínica o lugar:"
 
     # Crear el código QR
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
