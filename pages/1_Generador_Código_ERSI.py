@@ -13,7 +13,7 @@ SHEET_NAME = "Registros"
 from google.oauth2.service_account import Credentials
 
 creds = Credentials.from_service_account_info(
-    st.secrets["google_service_account"],
+    st.secrets["google_sheets"]["gcp_service_account"],
     scopes=SCOPE
 )
 
