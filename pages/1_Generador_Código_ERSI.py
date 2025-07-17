@@ -34,9 +34,9 @@ if generar:
         # Guardar en memoria
         nuevo = {
             "Iniciales": iniciales.upper(),
-            "Edad": edad,
             "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
             "Sexo": sexo,
+            "Edad": edad,
             "Código ERSI Base": codigo_base,
             "Código ERSI Único": codigo_base
         }
