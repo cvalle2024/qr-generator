@@ -11,7 +11,8 @@ st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
 # === CARGAR MAPEO DE UBICACIONES ===
-data = pd.read_csv("https://raw.githubusercontent.com/datasketch/streamlit-geodata-selector/main/data/centros_salud_ersi.csv")
+data = pd.read_csv("https://raw.githubusercontent.com/cvalle/ersi-app/main/centros_salud_ersi.csv")
+
 
 # === OBTENER LISTAS DE PAÍSES, DEPARTAMENTOS Y SERVICIOS ===
 paises = sorted(data['País'].dropna().unique())
