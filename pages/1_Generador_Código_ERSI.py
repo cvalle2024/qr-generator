@@ -9,8 +9,9 @@ from datetime import datetime
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
-    json.loads(st.secrets["google_sheets"]["gcp_service_account"]),
+    st.secrets["google_service_account"],
     scopes=scope
+
 )
 client = gspread.authorize(creds)
 
