@@ -14,9 +14,6 @@ with open(csv_path, 'rb') as f:
 data = pd.read_csv(csv_path, encoding=encoding)
 
 
-# Leer el archivo CSV usando la codificación detectada
-data = pd.read_csv(csv_path, encoding=encoding_detected)
-
 import streamlit as st
 from google.oauth2.service_account import Credentials
 import gspread
