@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
-    st.secrets["google_service_account"],  # ← usamos solo este bloque
+    st.secrets["google_service_account"],
     scopes=scope
 )
 client = gspread.authorize(creds)
@@ -15,9 +15,13 @@ SHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
 SHEET_NAME = st.secrets["google_sheets"]["sheet_name"]
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
+# === CARGA DE DATOS DE CENTROS DE SALUD ===
+df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
+paises = sorted(df_centros["País"].dropna().unique())
+
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
-st.title("🧾 Generador de Código ERSI para usuarios semilla")
+st.title("📟 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
 # === MEMORIA LOCAL DE STREAMLIT ===
@@ -26,6 +30,12 @@ if "registro" not in st.session_state:
 
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
+    pais = st.selectbox("País", paises)
+    departamentos = sorted(df_centros[df_centros["País"] == pais]["Departamento"].dropna().unique())
+    departamento = st.selectbox("Departamento", departamentos)
+    sitios_filtrados = df_centros[(df_centros["País"] == pais) & (df_centros["Departamento"] == departamento)]["Nombre del Sitio"].dropna().unique()
+    servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios_filtrados))
+
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
@@ -40,24 +50,24 @@ if generar:
         sexo_code = "HO" if sexo == "Hombre" else "MU"
         base = f"{iniciales.upper()}{dia_str}{mes_upper}{sexo_code}"
 
-        # Leer datos existentes desde Google Sheets
         try:
             existing_data = pd.DataFrame(sheet.get_all_records())
         except Exception as e:
             st.error(f"No se pudo leer la hoja: {e}")
             existing_data = pd.DataFrame()
 
-        # Verificar si el código base ya existe
         if not existing_data.empty and "Código ERSI Único" in existing_data.columns:
-            ocurrencias = existing_data["Código ERSI Único"].str.contains(base, na=False).sum()
+            ocurrencias = existing_data["Código ERSI Único"].str.startswith(base).sum()
         else:
             ocurrencias = 0
 
         sufijo = f"-{ocurrencias + 1:03}"
         codigo_ersi = base + sufijo
 
-        # Registrar en memoria
         nuevo = {
+            "País": pais,
+            "Departamento": departamento,
+            "Servicio de Salud": servicio_salud,
             "Iniciales": iniciales.upper(),
             "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
             "Sexo": sexo,
@@ -66,7 +76,6 @@ if generar:
         }
         st.session_state["registro"].append(nuevo)
 
-        # Guardar en Google Sheets
         try:
             sheet.append_row(list(nuevo.values()))
             st.success("✅ Código generado y guardado exitosamente")
@@ -84,7 +93,6 @@ if st.session_state["registro"]:
     df = pd.DataFrame(st.session_state["registro"])
     st.dataframe(df, use_container_width=True)
 
-    # Exportar a Excel
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         df.to_excel(writer, index=False, sheet_name="CodigosERSI")
