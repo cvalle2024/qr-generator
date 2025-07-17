@@ -1,72 +1,62 @@
 import streamlit as st
 import pandas as pd
-import io
+import random
 import json
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import datetime
 
-# === Configuración de la app ===
-st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
-st.title("🧾 Generador de Código ERSI para usuarios semilla")
-st.write("Complete el formulario para generar un código único por usuario.")
-
-# === Autenticación con Google Sheets ===
-SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+# === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
     json.loads(st.secrets["google_sheets"]["gcp_service_account"]),
-    scopes=SCOPE
+    scopes=scope
 )
 client = gspread.authorize(creds)
 
-# === Datos de la hoja ===
-SPREADSHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
+# Parámetros de la hoja
+SHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
 SHEET_NAME = st.secrets["google_sheets"]["sheet_name"]
-sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
-# === Leer datos existentes ===
-try:
-    existing_data = pd.DataFrame(sheet.get_all_records())
-except:
-    existing_data = pd.DataFrame(columns=["Iniciales", "Fecha de Nacimiento", "Sexo", "Edad", "Código ERSI Único"])
+# === FUNCIONES ===
+def generar_codigo_ersi(iniciales, fecha_nacimiento, sexo):
+    fecha_str = datetime.strptime(fecha_nacimiento, "%Y-%m-%d").strftime("%d%m%Y")
+    base = f"{iniciales.upper()}{fecha_str}{sexo.upper()[0]}"
+    worksheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+    existing_data = pd.DataFrame(worksheet.get_all_records())
 
-# === Formulario de entrada ===
-with st.form("ersi_formulario"):
-    iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
-    dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
-    mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun",
-                                             "jul", "ago", "sep", "oct", "nov", "dic"])
-    sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
-    edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
-    generar = st.form_submit_button("Generar Código ERSI")
+    # Evitar duplicados con sufijo incremental
+    ocurrencias = existing_data["Código ERSI Único"].str.contains(base, na=False).sum() if not existing_data.empty else 0
+    codigo_final = f"{base}-{ocurrencias + 1:03d}"
+    return codigo_final
 
-if generar:
-    if iniciales and sexo and dia and mes and (15 <= edad <= 100):
-        dia_str = f"{int(dia):02}"
-        mes_upper = mes.upper()
-        sexo_code = "HO" if sexo == "Hombre" else "MU"
-        base = f"{iniciales.upper()}{dia_str}{mes_upper}{sexo_code}"
+# === INTERFAZ STREAMLIT ===
+st.set_page_config(page_title="Generador Código ERSI", layout="centered")
+st.title("🔐 Generador de Código ERSI")
 
-        ocurrencias = existing_data["Código ERSI Único"].str.contains(base, na=False).sum()
-        sufijo = f"-{ocurrencias + 1:03}"
-        codigo_final = base + sufijo
+with st.form("ersi_form"):
+    col1, col2 = st.columns(2)
+    with col1:
+        iniciales = st.text_input("Iniciales del nombre", max_chars=5)
+        sexo = st.selectbox("Sexo", ["Femenino", "Masculino"])
+    with col2:
+        fecha_nac = st.date_input("Fecha de nacimiento", format="YYYY-MM-DD")
+        edad = st.number_input("Edad", min_value=0, max_value=120, step=1)
 
-        nuevo_registro = {
-            "Iniciales": iniciales.upper(),
-            "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
-            "Sexo": sexo,
-            "Edad": edad,
-            "Código ERSI Único": codigo_final
-        }
+    submitted = st.form_submit_button("Generar y Guardar")
 
-        # Agregar al registro remoto (Google Sheets)
-        sheet.append_row(list(nuevo_registro.values()))
+if submitted:
+    if iniciales and sexo and fecha_nac:
+        fecha_nac_str = fecha_nac.strftime("%Y-%m-%d")
+        codigo = generar_codigo_ersi(iniciales, fecha_nac_str, sexo)
 
-        # Mostrar resultado
-        st.success("✅ Código generado exitosamente")
-        st.code(codigo_final, language="text")
+        # Guardar en Google Sheets
+        worksheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+        worksheet.append_row([iniciales.upper(), fecha_nac_str, sexo, edad, codigo])
 
+        st.success(f"Código ERSI generado: `{codigo}`")
     else:
-        st.error("Por favor, complete todos los campos correctamente.")
+        st.error("Por favor, complete todos los campos del formulario.")
 
 
 
