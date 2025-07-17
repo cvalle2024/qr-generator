@@ -17,6 +17,9 @@ sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # === CARGA DE DATOS DE CENTROS DE SALUD ===
 df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
+df_centros[["País", "Departamento"]] = df_centros[["País", "Departamento"]].astype(str)
+df_centros["País"] = df_centros["País"].str.strip()
+df_centros["Departamento"] = df_centros["Departamento"].str.strip()
 paises = sorted(df_centros["País"].dropna().unique())
 
 # === CONFIGURACIÓN DE STREAMLIT ===
@@ -31,9 +34,10 @@ if "registro" not in st.session_state:
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
     pais = st.selectbox("País", paises)
-    departamentos = sorted(df_centros[df_centros["País"] == pais]["Departamento"].dropna().unique())
+    df_filtrado_pais = df_centros[df_centros["País"] == pais]
+    departamentos = sorted(df_filtrado_pais["Departamento"].dropna().unique())
     departamento = st.selectbox("Departamento", departamentos)
-    sitios_filtrados = df_centros[(df_centros["País"] == pais) & (df_centros["Departamento"] == departamento)]["Nombre del Sitio"].dropna().unique()
+    sitios_filtrados = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento]["Nombre del Sitio"].dropna().unique()
     servicio_salud = st.selectbox("Servicio de Salud", sorted(sitios_filtrados))
 
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
