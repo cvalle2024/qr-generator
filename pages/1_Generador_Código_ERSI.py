@@ -47,8 +47,9 @@ if "registro" not in st.session_state:
 
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
-    pais_mostrado = st.selectbox("País", paises_visibles)
-    pais_filtrado = paises_dict[pais_mostrado]
+    pais_mostrado = st.selectbox("País", sorted(df_centros["País"].unique()))
+    df_filtrado_pais = df_centros[df_centros["País"] == pais_mostrado]
+
 
     df_filtrado_pais = df_centros[df_centros["pais_norm"] == pais_filtrado]
 
