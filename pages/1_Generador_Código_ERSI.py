@@ -1,29 +1,29 @@
+import streamlit as st
+import pandas as pd
+import io
+import json
 from google.oauth2.service_account import Credentials
 import gspread
-import pandas as pd
-import streamlit as st
-import io
 
 # === CONFIGURACIÓN ===
-SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-SHEET_ID = "1V1zrEYSj51BqRD9dkehjOHp2rglB3NwyIamTN4iPMCc"
-SHEET_NAME = "Registros"
-
-# === CONEXIÓN A GOOGLE SHEETS ===
-from google.oauth2.service_account import Credentials
-
-creds = Credentials.from_service_account_info(
-    st.secrets["google_sheets"]["gcp_service_account"],
-    scopes=SCOPE
-)
-
-client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
-
-# === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 st.title("🧾 Generador de Código ERSI para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
+
+# === AUTENTICACIÓN GOOGLE SHEETS ===
+SCOPE = ["https://www.googleapis.com/auth/spreadsheets"]
+creds = Credentials.from_service_account_info(
+    json.loads(st.secrets["google_sheets"]["gcp_service_account"]),
+    scopes=SCOPE
+)
+client = gspread.authorize(creds)
+SHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
+SHEET_NAME = st.secrets["google_sheets"]["sheet_name"]
+sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+
+# Leer datos actuales (si los hay)
+data = sheet.get_all_records()
+existing_data = pd.DataFrame(data) if data else pd.DataFrame(columns=["Iniciales", "Fecha de Nacimiento", "Sexo", "Edad", "Código ERSI Único"])
 
 # === FORMULARIO ===
 with st.form("ersi_formulario"):
@@ -32,56 +32,61 @@ with st.form("ersi_formulario"):
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
     edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
+    
     generar = st.form_submit_button("Generar Código ERSI")
 
-# === PROCESO DE GENERACIÓN ===
+# === LÓGICA DE GENERACIÓN ===
 if generar:
     if iniciales and sexo and dia and mes:
         dia_str = f"{int(dia):02}"
         mes_upper = mes.upper()
         sexo_code = "HO" if sexo == "Hombre" else "MU"
+
         base = f"{iniciales.upper()}{dia_str}{mes_upper}{sexo_code}"
 
-        # Leer códigos existentes
-        try:
-            existing_data = pd.DataFrame(sheet.get_all_records())
-        except:
-            existing_data = pd.DataFrame(columns=["Código ERSI Único"])
-
-        ocurrencias = existing_data["Código ERSI Único"].str.contains(base, na=False).sum()
-        sufijo = f"-{ocurrencias + 1:03}"
-        codigo_final = base + sufijo
-
-        # Verificar duplicado
-        if codigo_final in existing_data["Código ERSI Único"].values:
-            st.error("⚠️ Este código ya ha sido generado previamente. Intente con otros datos.")
+        # Verificar duplicados en la hoja
+        if not existing_data.empty and "Código ERSI Único" in existing_data.columns:
+            ocurrencias = existing_data["Código ERSI Único"].str.contains(base, na=False).sum()
         else:
-            # Guardar nuevo registro
-            nuevo_registro = [iniciales.upper(), f"{dia_str}-{mes_upper}", sexo, edad, codigo_final]
-            sheet.append_row(nuevo_registro)
+            ocurrencias = 0
 
-            st.success("✅ Código generado exitosamente")
-            st.code(codigo_final, language="text")
+        sufijo = f"-{ocurrencias + 1:03}"
+        codigo_base = base + sufijo
 
-            # Mostrar tabla actualizada
-            updated_data = pd.DataFrame(sheet.get_all_records())
-            st.markdown("### 📋 Códigos generados")
-            st.dataframe(updated_data, use_container_width=True)
+        nuevo_registro = {
+            "Iniciales": iniciales.upper(),
+            "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
+            "Sexo": sexo,
+            "Edad": edad,
+            "Código ERSI Único": codigo_base
+        }
 
-            # Botón para descargar
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-                updated_data.to_excel(writer, index=False, sheet_name="CodigosERSI")
+        # Agregar a la hoja
+        sheet.append_row(list(nuevo_registro.values()))
 
-            st.download_button(
-                label="⬇️ Descargar Excel",
-                data=buffer.getvalue(),
-                file_name="codigos_ersi.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+        # Mostrar resultado
+        st.success("✅ Código generado exitosamente")
+        st.code(codigo_base, language="text")
+
     else:
-        st.error("Por favor complete todos los campos correctamente.")
+        st.error("Por favor, complete todos los campos correctamente.")
 
+# === MOSTRAR REGISTROS EXISTENTES (OPCIONAL) ===
+if not existing_data.empty:
+    st.markdown("### 📋 Códigos ya generados")
+    st.dataframe(existing_data, use_container_width=True)
+
+    # Descargar como Excel
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        existing_data.to_excel(writer, index=False, sheet_name="CodigosERSI")
+
+    st.download_button(
+        label="⬇️ Descargar Excel",
+        data=buffer.getvalue(),
+        file_name="codigos_ersi.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 
