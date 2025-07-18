@@ -105,6 +105,7 @@ if generar:
             st.warning(f"Código generado, pero no se pudo guardar en Google Sheets: {e}")
 
         st.code(codigo_ersi, language="text")
+        st.session_state["ultimo_ersi"]=codigo_ersi
     else:
         st.error("Por favor, complete todos los campos correctamente.")
 
