@@ -46,7 +46,7 @@ servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles)
 
 # === FORMULARIO PARA DATOS PERSONALES ===
 with st.form("ersi_formulario"):
-    st.markdown("### 👤 Información del Usuario")
+    st.markdown("### 👤 Información del Reclutador")
     iniciales = st.text_input("Ingrese las primeras 2 letras de un nombre y de un apellido (máx. 4 letras, ej. CABU)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
