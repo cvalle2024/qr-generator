@@ -29,48 +29,32 @@ st.write("Complete el formulario para generar un código único por usuario.")
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
-# === FORMULARIO DE ENTRADA ===
+# === SELECCIÓN DE UBICACIÓN ===
+st.markdown("### 🌍 Selección de Ubicación")
+
+paises_disponibles = sorted(df_centros["País"].dropna().unique())
+pais_seleccionado = st.selectbox("País", paises_disponibles)
+
+df_filtrado_pais = df_centros[df_centros["País"] == pais_seleccionado]
+
+departamentos_disponibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
+departamento_seleccionado = st.selectbox("Departamento", departamentos_disponibles)
+
+df_filtrado_depto = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento_seleccionado]
+sitios_disponibles = sorted(df_filtrado_depto["Nombre del Sitio"].dropna().unique())
+servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles)
+
+# === FORMULARIO PARA DATOS PERSONALES ===
 with st.form("ersi_formulario"):
-
-    # Lista de países disponibles
-    paises_disponibles = sorted(df_centros["País"].dropna().unique())
-
-    # Selección de país con manejo de estado
-    if "pais" not in st.session_state:
-        st.session_state["pais"] = paises_disponibles[0]
-
-    st.session_state["pais"] = st.selectbox("País", paises_disponibles, index=paises_disponibles.index(st.session_state["pais"]))
-
-    pais_seleccionado = st.session_state["pais"]
-    st.markdown(f"🔍 País seleccionado: `{pais_seleccionado}`")
-
-    # Filtrar por país
-    df_filtrado_pais = df_centros[df_centros["País"] == pais_seleccionado]
-
-    # Departamento
-    departamentos_disponibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
-    if "depto" not in st.session_state or st.session_state["depto"] not in departamentos_disponibles:
-        st.session_state["depto"] = departamentos_disponibles[0] if departamentos_disponibles else ""
-
-    st.session_state["depto"] = st.selectbox("Departamento", departamentos_disponibles, index=departamentos_disponibles.index(st.session_state["depto"]) if st.session_state["depto"] in departamentos_disponibles else 0)
-    departamento_seleccionado = st.session_state["depto"]
-    st.markdown(f"🏙️ Departamento seleccionado: `{departamento_seleccionado}`")
-
-    # Sitios
-    df_filtrado_depto = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento_seleccionado]
-    sitios_disponibles = sorted(df_filtrado_depto["Nombre del Sitio"].dropna().unique())
-    servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles) if sitios_disponibles else ""
-
-    # Datos personales
+    st.markdown("### 👤 Información del Usuario")
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
     edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
-
     generar = st.form_submit_button("Generar Código ERSI")
 
-# === LÓGICA DE GENERACIÓN ===
+# === LÓGICA DE GENERACIÓN DE CÓDIGO ===
 if generar:
     if iniciales and sexo and dia and mes and (15 <= edad <= 100):
         dia_str = f"{int(dia):02}"
@@ -124,7 +108,7 @@ if generar:
     else:
         st.error("Por favor, complete todos los campos correctamente.")
 
-# === TABLA Y DESCARGA ===
+# === TABLA Y DESCARGA DE CÓDIGOS ===
 if st.session_state["registro"]:
     st.markdown("### 📋 Códigos generados en esta sesión")
     df = pd.DataFrame(st.session_state["registro"])
