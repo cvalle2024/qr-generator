@@ -48,6 +48,8 @@ servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles)
 with st.form("ersi_formulario"):
     st.markdown("### 👤 Información del Usuario")
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
+    if len(iniciales)> 4:
+        st.warning("Solo se permiten hasta 4 letras en las iniciales.")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
