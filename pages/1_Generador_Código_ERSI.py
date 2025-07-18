@@ -23,14 +23,14 @@ df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.
 
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
-st.title("📟 Generador de Código ERSI para usuarios semilla")
+st.title("Generador de Código para usuarios semilla")
 st.write("Complete el formulario para generar un código único por usuario.")
 
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
 # === SELECCIÓN DE UBICACIÓN ===
-st.markdown("### 🌍 Selección de Ubicación")
+st.markdown("Selección de Ubicación")
 
 paises_disponibles = sorted(df_centros["País"].dropna().unique())
 pais_seleccionado = st.selectbox("País", paises_disponibles)
