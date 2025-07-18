@@ -23,7 +23,7 @@ with st.form("qr_form"):
 # === Lógica ===
 if generar and texto_qr and nombre_clinica:
     # Texto fijo
-    texto_fijo = "Este cupón es válido por 4 semanas. Si ya venció, ¡aún te atenderán! Preséntalo en la clínica o lugar:"
+    texto_fijo = "Este cupón es válido por 4 semanas. Si ya venció, ¡aún te atenderán!    Preséntalo en la clínica o lugar:"
 
     # Construir texto variable combinando clínica y teléfono
     texto_variable = nombre_clinica
