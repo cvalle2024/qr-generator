@@ -8,9 +8,9 @@ st.write("Seleccione una opción:")
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("🧾 Generar Código ERSI"):
+    if st.button("🧾 Generar código único para reclutadores"):
         st.switch_page("pages/1_Generador_Código_ERSI.py")
 
 with col2:
-    if st.button("🔐 Generar Código QR"):
+    if st.button("🔐 Generar código QR"):
         st.switch_page("pages/2_Generador_Código_QR.py")
