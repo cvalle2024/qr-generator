@@ -50,6 +50,7 @@ with st.form("ersi_formulario"):
     iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
     if len(iniciales)> 4:
         st.warning("Solo se permiten hasta 4 letras en las iniciales.")
+        iniciales=iniciales[:4] #Truncar si excede
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
