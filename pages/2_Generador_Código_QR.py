@@ -4,9 +4,9 @@ import streamlit as st
 import io
 import textwrap
 
-st.set_page_config(page_title="Generador de Código QR", page_icon="✅", layout="centered")
+st.set_page_config(page_title="Generador de código QR para Reclutadores", page_icon="✅", layout="centered")
 
-st.title("🔐 Generador de Código QR para usuarios semilla")
+st.title("🔐 Generador de código QR para Reclutadores")
 st.write("Complete la información y genere un código QR")
 
 # === Detectar si viene desde ERSI ===
@@ -14,7 +14,7 @@ valor_por_defecto = st.session_state.get("ultimo_ersi", "")
 
 # === Formulario ===
 with st.form("qr_form"):
-    texto_qr = st.text_input("Código del usuario semilla (ERSI)", value=valor_por_defecto)
+    texto_qr = st.text_input("Código único del Reclutador", value=valor_por_defecto)
     nombre_clinica = st.text_input("Nombre de la clínica o lugar", "")
     telefono = st.text_input("Por favor ingrese el número de teléfono", "")
 
