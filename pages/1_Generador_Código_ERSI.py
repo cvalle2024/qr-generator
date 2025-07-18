@@ -30,7 +30,7 @@ if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
 # === SELECCIÓN DE UBICACIÓN ===
-st.markdown("Selección de Ubicación")
+st.markdown("### 🌍 Selección de Ubicación")
 
 paises_disponibles = sorted(df_centros["País"].dropna().unique())
 pais_seleccionado = st.selectbox("País", paises_disponibles)
@@ -47,10 +47,7 @@ servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles)
 # === FORMULARIO PARA DATOS PERSONALES ===
 with st.form("ersi_formulario"):
     st.markdown("### 👤 Información del Usuario")
-    iniciales = st.text_input("Iniciales del Nombre y Apellido (ej. LMOC)", "")
-    if len(iniciales)> 4:
-        st.warning("Solo se permiten hasta 4 letras en las iniciales.")
-        iniciales=iniciales[:4] #Truncar si excede
+    iniciales = st.text_input("Iniciales del Nombre y Apellido (máx. 4 letras, ej. LMOC)", "")
     dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
     sexo = st.selectbox("Sexo", ["Hombre", "Mujer"])
@@ -59,7 +56,7 @@ with st.form("ersi_formulario"):
 
 # === LÓGICA DE GENERACIÓN DE CÓDIGO ===
 if generar:
-    if iniciales and sexo and dia and mes and (15 <= edad <= 100):
+    if iniciales and len(iniciales) <= 4 and sexo and dia and mes and (15 <= edad <= 100):
         dia_str = f"{int(dia):02}"
         mes_upper = mes.upper()
         sexo_code = "H" if sexo == "Hombre" else "M"
@@ -91,6 +88,7 @@ if generar:
         }
 
         st.session_state["registro"].append(nuevo)
+        st.session_state["ultimo_ersi"] = codigo_ersi
 
         try:
             sheet.append_row([
@@ -108,9 +106,12 @@ if generar:
             st.warning(f"Código generado, pero no se pudo guardar en Google Sheets: {e}")
 
         st.code(codigo_ersi, language="text")
-        st.session_state["ultimo_ersi"]=codigo_ersi
+
     else:
-        st.error("Por favor, complete todos los campos correctamente.")
+        if len(iniciales) > 4:
+            st.error("❌ Las iniciales deben tener máximo 4 letras.")
+        else:
+            st.error("❌ Por favor, complete todos los campos correctamente.")
 
 # === TABLA Y DESCARGA DE CÓDIGOS ===
 if st.session_state["registro"]:
