@@ -16,14 +16,14 @@ valor_por_defecto = st.session_state.get("ultimo_ersi", "")
 with st.form("qr_form"):
     texto_qr = st.text_input("Código único del Reclutador", value=valor_por_defecto)
     nombre_clinica = st.text_input("Nombre de la clínica o lugar", "")
-    telefono = st.text_input("Por favor ingrese el número de teléfono", "")
+    telefono = st.text_input("Número telefonico del TBAC", "")
 
-    generar = st.form_submit_button("Generar Código QR")
+    generar = st.form_submit_button("Generar código QR")
 
 # === Lógica ===
 if generar and texto_qr and nombre_clinica:
     # Texto fijo
-    texto_fijo = "Este cupón es válido por 4 semanas. Si ya venció, ¡aún te atenderán!    Preséntalo en la clínica o lugar:"
+    texto_fijo = "Con este código podrás presentarte para ser atendido en la clínica o lugar: "
 
     # Construir texto variable combinando clínica y teléfono
     texto_variable = nombre_clinica
