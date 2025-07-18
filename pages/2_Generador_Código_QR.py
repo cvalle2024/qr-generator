@@ -3,30 +3,34 @@ from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 import io
 import textwrap
-import os
 
 st.set_page_config(page_title="Generador de Código QR", page_icon="✅", layout="centered")
 
 st.title("🔐 Generador de Código QR para usuarios semilla")
 st.write("Complete la información y genere un código QR")
 
-# === Formulario ===
-# Detectar si viene desde ERSI
+# === Detectar si viene desde ERSI ===
 valor_por_defecto = st.session_state.get("ultimo_ersi", "")
 
-# Formulario QR
+# === Formulario ===
 with st.form("qr_form"):
     texto_qr = st.text_input("Código del usuario semilla (ERSI)", value=valor_por_defecto)
-    texto_variable = st.text_input("Nombre de la clínica y contacto", "")
+    nombre_clinica = st.text_input("Nombre de la clínica o lugar", "")
+    telefono = st.text_input("Número de teléfono (opcional)", "")
 
     generar = st.form_submit_button("Generar Código QR")
 
-
-if generar and texto_qr and texto_variable:
+# === Lógica ===
+if generar and texto_qr and nombre_clinica:
     # Texto fijo
-    texto_fijo = "Este cupón es valido en 4 semanas y si ya se vencio no te preocupes siempre te atenderán. Debe presentarlo al acercarse a la clínica o lugar:"
+    texto_fijo = "Este cupón es válido por 4 semanas. Si ya venció, ¡aún te atenderán! Preséntalo en la clínica o lugar:"
 
-    # Crear el código QR
+    # Construir texto variable combinando clínica y teléfono
+    texto_variable = nombre_clinica
+    if telefono.strip():
+        texto_variable += f" | Tel: {telefono.strip()}"
+
+    # Crear QR
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     qr.add_data(texto_qr)
     qr.make(fit=True)
@@ -34,7 +38,7 @@ if generar and texto_qr and texto_variable:
 
     ancho_qr, alto_qr = qr_img.size
 
-    # Cargar fuentes DejaVuSans
+    # Cargar fuente
     try:
         fuente_normal = ImageFont.truetype("DejaVuSans.ttf", 14)
         fuente_negrita = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
@@ -42,45 +46,43 @@ if generar and texto_qr and texto_variable:
         fuente_normal = ImageFont.load_default()
         fuente_negrita = ImageFont.load_default()
 
-    # Separar el texto en líneas según el ancho del QR
-    max_chars_per_line = ancho_qr // 10  # ajustable según tamaño
+    # Preparar líneas de texto
+    max_chars_per_line = ancho_qr // 10
     texto_fijo_lineas = textwrap.wrap(texto_fijo, width=max_chars_per_line)
     texto_variable_lineas = textwrap.wrap(texto_variable, width=max_chars_per_line)
 
-    # Calcular altura total del texto
     num_lineas = len(texto_fijo_lineas) + len(texto_variable_lineas)
     altura_texto = 20 * num_lineas + 20
     alto_total = alto_qr + altura_texto
 
-    # Crear imagen final (ajustando ancho si hace falta)
-    ancho_total = ancho_qr
-    imagen_final = Image.new("RGB", (ancho_total, alto_total), "white")
-    imagen_final.paste(qr_img, ((ancho_total - ancho_qr) // 2, 0))
+    # Imagen final
+    imagen_final = Image.new("RGB", (ancho_qr, alto_total), "white")
+    imagen_final.paste(qr_img, (0, 0))
     draw = ImageDraw.Draw(imagen_final)
 
-    # Dibujar texto fijo
+    # Agregar texto fijo
     y_texto = alto_qr + 5
     for linea in texto_fijo_lineas:
         ancho_linea = draw.textlength(linea, font=fuente_normal)
-        x_texto = (ancho_total - ancho_linea) // 2
+        x_texto = (ancho_qr - ancho_linea) // 2
         draw.text((x_texto, y_texto), linea, fill="black", font=fuente_normal)
         y_texto += 20
 
-    # Dibujar texto variable en negrita
+    # Agregar texto variable (clínica y teléfono) en negrita
     for linea in texto_variable_lineas:
         ancho_linea = draw.textlength(linea, font=fuente_negrita)
-        x_texto = (ancho_total - ancho_linea) // 2
+        x_texto = (ancho_qr - ancho_linea) // 2
         draw.text((x_texto, y_texto), linea, fill="black", font=fuente_negrita)
         y_texto += 20
 
-    # Mostrar imagen
+    # Mostrar en pantalla
     st.image(imagen_final, caption="Código QR Generado", use_column_width=False)
 
-    # Crear nombre del archivo basado en la clínica
-    nombre_clinica = texto_variable.replace(" ", "_").replace("/", "-")
-    nombre_archivo = f"QR_{nombre_clinica}.png"
+    # Nombre del archivo
+    nombre_base = nombre_clinica.replace(" ", "_").replace("/", "-")
+    nombre_archivo = f"QR_{nombre_base}.png"
 
-    # Descargar como PNG
+    # Descargar
     buffer = io.BytesIO()
     imagen_final.save(buffer, format="PNG")
     st.download_button(
@@ -89,6 +91,3 @@ if generar and texto_qr and texto_variable:
         file_name=nombre_archivo,
         mime="image/png"
     )
-
-elif generar:
-    st.error("Por favor, complete ambos campos.")
