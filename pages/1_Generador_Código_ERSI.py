@@ -59,7 +59,7 @@ if generar:
     if iniciales and sexo and dia and mes and (15 <= edad <= 100):
         dia_str = f"{int(dia):02}"
         mes_upper = mes.upper()
-        sexo_code = "HO" if sexo == "Hombre" else "MU"
+        sexo_code = "H" if sexo == "Hombre" else "M"
         base = f"{iniciales.upper()}{dia_str}{mes_upper}{sexo_code}"
 
         try:
