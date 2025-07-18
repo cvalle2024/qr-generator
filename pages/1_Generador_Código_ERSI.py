@@ -23,8 +23,8 @@ df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.
 
 # === CONFIGURACIÓN DE STREAMLIT ===
 st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
-st.title("Generador de Código para usuarios semilla")
-st.write("Complete el formulario para generar un código único por usuario.")
+st.title("Generador de código único para Reclutadores")
+st.write("Complete el formulario para generar un código único por Reclutadores.")
 
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
