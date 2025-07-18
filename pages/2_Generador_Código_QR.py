@@ -16,7 +16,7 @@ valor_por_defecto = st.session_state.get("ultimo_ersi", "")
 with st.form("qr_form"):
     texto_qr = st.text_input("Código del usuario semilla (ERSI)", value=valor_por_defecto)
     nombre_clinica = st.text_input("Nombre de la clínica o lugar", "")
-    telefono = st.text_input("Número de teléfono (opcional)", "")
+    telefono = st.text_input("Por favor ingrese el número de teléfono", "")
 
     generar = st.form_submit_button("Generar Código QR")
 
