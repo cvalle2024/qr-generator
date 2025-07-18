@@ -29,18 +29,13 @@ st.write("Complete el formulario para generar un código único por usuario.")
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
-
 # === FORMULARIO DE ENTRADA ===
 with st.form("ersi_formulario"):
 
-    # Reinicio opcional (puedes quitar esto después de pruebas)
-    if st.button("🔄 Reiniciar selección"):
-        st.session_state.clear()
-        st.experimental_rerun()
-
-    # País
+    # Lista de países disponibles
     paises_disponibles = sorted(df_centros["País"].dropna().unique())
 
+    # Selección de país con manejo de estado
     if "pais" not in st.session_state:
         st.session_state["pais"] = paises_disponibles[0]
 
@@ -49,23 +44,21 @@ with st.form("ersi_formulario"):
     pais_seleccionado = st.session_state["pais"]
     st.markdown(f"🔍 País seleccionado: `{pais_seleccionado}`")
 
+    # Filtrar por país
     df_filtrado_pais = df_centros[df_centros["País"] == pais_seleccionado]
 
     # Departamento
     departamentos_disponibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
-
-    if "depto" not in st.session_state or st.session_state["pais"] != pais_seleccionado:
+    if "depto" not in st.session_state or st.session_state["depto"] not in departamentos_disponibles:
         st.session_state["depto"] = departamentos_disponibles[0] if departamentos_disponibles else ""
 
     st.session_state["depto"] = st.selectbox("Departamento", departamentos_disponibles, index=departamentos_disponibles.index(st.session_state["depto"]) if st.session_state["depto"] in departamentos_disponibles else 0)
-
     departamento_seleccionado = st.session_state["depto"]
     st.markdown(f"🏙️ Departamento seleccionado: `{departamento_seleccionado}`")
 
-    # Sitio
+    # Sitios
     df_filtrado_depto = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento_seleccionado]
     sitios_disponibles = sorted(df_filtrado_depto["Nombre del Sitio"].dropna().unique())
-
     servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles) if sitios_disponibles else ""
 
     # Datos personales
@@ -76,7 +69,6 @@ with st.form("ersi_formulario"):
     edad = st.number_input("Edad del usuario", min_value=15, max_value=100, step=1)
 
     generar = st.form_submit_button("Generar Código ERSI")
-
 
 # === LÓGICA DE GENERACIÓN ===
 if generar:
