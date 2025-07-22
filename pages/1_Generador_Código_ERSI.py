@@ -56,12 +56,32 @@ with st.form("ersi_formulario"):
 
 # === LÓGICA DE GENERACIÓN DE CÓDIGO ===
 if generar:
-    if iniciales and len(iniciales) <= 4 and sexo and dia and mes and (15 <= edad <= 100):
-        dia_str = f"{int(dia):02}"
-        mes_upper = mes.upper()
-        sexo_code = "H" if sexo == "Hombre" else "M"
-        base = f"{iniciales.upper()}{dia_str}{mes_upper}{sexo_code}"
+    campos_llenos = all([
+        pais_seleccionado,
+        departamento_seleccionado,
+        servicio_salud,
+        iniciales.strip(),
+        sexo,
+        dia,
+        mes,
+        15 <= edad <= 100
+    ])
 
+    if not campos_llenos:
+        st.error("❌ Por favor, complete todos los campos obligatorios antes de generar el código.")
+    elif len(iniciales.strip()) > 4:
+        st.error("❌ Las iniciales deben tener máximo 4 letras.")
+    else:
+        # === CONSTRUCCIÓN DEL CÓDIGO ===
+        pais_code = pais_seleccionado[:3].upper()
+        iniciales_code = iniciales.strip().upper()
+        dia_str = f"{int(dia):02}"
+        mes_code = mes.upper()
+        sexo_code = "H" if sexo == "Hombre" else "M"
+
+        base = f"{pais_code}-{iniciales_code}{dia_str}{mes_code}-{sexo_code}"
+
+        # === CÁLCULO DE SUFIJO ÚNICO ===
         try:
             existing_data = pd.DataFrame(sheet.get_all_records())
         except Exception as e:
@@ -73,15 +93,15 @@ if generar:
         else:
             ocurrencias = 0
 
-        sufijo = f"-{ocurrencias + 1:03}"
-        codigo_ersi = base + sufijo
+        sufijo = f"{ocurrencias + 1:03}"
+        codigo_ersi = f"{base}-{sufijo}"
 
         nuevo = {
             "País": pais_seleccionado,
             "Departamento": departamento_seleccionado,
             "Servicio de Salud": servicio_salud,
-            "Iniciales": iniciales.upper(),
-            "Fecha de Nacimiento": f"{dia_str}-{mes_upper}",
+            "Iniciales": iniciales_code,
+            "Fecha de Nacimiento": f"{dia_str}-{mes_code}",
             "Sexo": sexo,
             "Edad": edad,
             "Código ERSI Único": codigo_ersi
@@ -107,12 +127,6 @@ if generar:
 
         st.code(codigo_ersi, language="text")
 
-    else:
-        if len(iniciales) > 4:
-            st.error("❌ Las iniciales deben tener máximo 4 letras.")
-        else:
-            st.error("❌ Por favor, complete todos los campos correctamente.")
-
 # === TABLA Y DESCARGA DE CÓDIGOS ===
 if st.session_state["registro"]:
     st.markdown("### 📋 Códigos generados en esta sesión")
@@ -129,4 +143,3 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
