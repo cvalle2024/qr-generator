@@ -69,7 +69,7 @@ if generar:
 
     if not campos_llenos:
         st.error("❌ Por favor, complete todos los campos obligatorios antes de generar el código.")
-    elif len(iniciales.strip()) > 4:
+    elif len(iniciales.strip()) < 4:
         st.error("❌ Las iniciales deben tener máximo 4 letras.")
     else:
         # === CONSTRUCCIÓN DEL CÓDIGO ===
