@@ -91,8 +91,8 @@ if generar:
         letras_iniciales =''.join([p[0] for p in palabra_pais])
 
         if len(letras_iniciales)<3:
-            ultima_palabra=palabra_pais[-1]
-            letra_restante=ultima_palabra[1:4]
+            ultima_palabra = palabra_pais[-1]
+            letra_restante = ''.join([c for c in ultima_palabra if c.isalpha()])[1:]
             pais_code=(letras_iniciales + letra_restante)[:3].upper()
         else:
             pais_code=letras_iniciales[:3].upper()
