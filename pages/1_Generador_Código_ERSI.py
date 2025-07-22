@@ -88,10 +88,14 @@ if generar:
         # === CONSTRUCCIÓN DEL CÓDIGO ===
         #pais_code = pais_seleccionado[:3].upper()
         palabra_pais=pais_seleccionado.split()
-        if len(palabra_pais)== 1:
-            pais_code=palabra_psis[0][:3].upper()
+        letras_iniciales =''.join([p[0] for p in palabra_pais])
+
+        if len(letras_iniciales)<3:
+            ultima_palabra=palabra_pais[-1]
+            letra_restante=ultima_palabra[1:4]
+            pais_code=(letras_iniciales + letra_restante)[:3].upper()
         else:
-            pais_code=''.join([p[0] for p in palabra_pais])[:3].upper()
+            pais_code=letras_iniciales[:3].upper()
         iniciales_code = iniciales.strip().upper()
         dia_str = f"{int(dia):02}"
         mes_code = mes.upper()
