@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 import io
+import re
 from google.oauth2.service_account import Credentials
 
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
@@ -85,17 +86,16 @@ if generar:
         for e in errores:
             st.error(e)
     else:
-        # === CONSTRUCCIÓN DEL CÓDIGO ===
-        #pais_code = pais_seleccionado[:3].upper()
-        palabra_pais=pais_seleccionado.split()
-        letras_iniciales =''.join([p[0] for p in palabra_pais])
-
-        if len(letras_iniciales)<3:
-            ultima_palabra = palabra_pais[-1]
-            letra_restante = ''.join([c for c in ultima_palabra if c.isalpha()])[1:]
-            pais_code=(letras_iniciales + letra_restante)[:3].upper()
+        # === CONSTRUCCIÓN DEL CÓDIGO BASE ===
+        palabras_pais = pais_seleccionado.strip().split()
+        letras_iniciales = ''.join([p[0] for p in palabras_pais])
+        if len(letras_iniciales) >= 3:
+            pais_code = letras_iniciales[:3].upper()
         else:
-            pais_code=letras_iniciales[:3].upper()
+            segunda_palabra = palabras_pais[1] if len(palabras_pais) > 1 else ""
+            extra = segunda_palabra[1] if len(segunda_palabra) > 1 else ""
+            pais_code = (letras_iniciales + extra).upper()[:3]
+
         iniciales_code = iniciales.strip().upper()
         dia_str = f"{int(dia):02}"
         mes_code = mes.upper()
@@ -103,7 +103,7 @@ if generar:
 
         base = f"{pais_code}-{iniciales_code}{dia_str}{mes_code}-{sexo_code}"
 
-        # === CÁLCULO DE SUFIJO ÚNICO ===
+        # === CÁLCULO DE CORRELATIVO GLOBAL ÚNICO ===
         try:
             existing_data = pd.DataFrame(sheet.get_all_records())
         except Exception as e:
@@ -111,13 +111,20 @@ if generar:
             existing_data = pd.DataFrame()
 
         if not existing_data.empty and "Código ERSI Único" in existing_data.columns:
-            ocurrencias = existing_data["Código ERSI Único"].str.startswith(base).sum()
+            codigos = existing_data["Código ERSI Único"].dropna().tolist()
+            correlativos = []
+            for c in codigos:
+                match = re.search(r"-(\d{3})$", c)
+                if match:
+                    correlativos.append(int(match.group(1)))
+            siguiente_numero = max(correlativos) + 1 if correlativos else 1
         else:
-            ocurrencias = 0
+            siguiente_numero = 1
 
-        sufijo = f"{ocurrencias + 1:03}"
+        sufijo = f"{siguiente_numero:03}"
         codigo_ersi = f"{base}-{sufijo}"
 
+        # === GUARDAR DATOS ===
         nuevo = {
             "País": pais_seleccionado,
             "Departamento": departamento_seleccionado,
@@ -165,3 +172,4 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
