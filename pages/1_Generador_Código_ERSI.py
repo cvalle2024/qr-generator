@@ -56,21 +56,34 @@ with st.form("ersi_formulario"):
 
 # === LÓGICA DE GENERACIÓN DE CÓDIGO ===
 if generar:
-    campos_llenos = all([
-        pais_seleccionado,
-        departamento_seleccionado,
-        servicio_salud,
-        iniciales.strip(),
-        sexo,
-        dia,
-        mes,
-        15 <= edad <= 100
-    ])
+    errores = []
 
-    if not campos_llenos:
-        st.error("❌ Por favor, complete todos los campos obligatorios antes de generar el código.")
+    # Validaciones detalladas de campos
+    if not pais_seleccionado:
+        errores.append("❌ El campo 'País' no puede estar vacío.")
+    if not departamento_seleccionado:
+        errores.append("❌ El campo 'Departamento' no puede estar vacío.")
+    if not servicio_salud:
+        errores.append("❌ El campo 'Servicio de Salud' no puede estar vacío.")
+    if not iniciales.strip():
+        errores.append("❌ El campo 'Iniciales' no puede estar vacío.")
     elif len(iniciales.strip()) > 4:
-        st.error("❌ Las iniciales deben tener máximo 4 letras.")
+        errores.append("❌ Las iniciales deben tener máximo 4 letras.")
+    elif len(iniciales.strip()) == 4:
+        st.info("ℹ️ Ya ingresaste las 4 letras requeridas en el campo 'Iniciales'.")
+    if not dia:
+        errores.append("❌ El campo 'Día' no puede estar vacío.")
+    if not mes:
+        errores.append("❌ El campo 'Mes' no puede estar vacío.")
+    if not sexo:
+        errores.append("❌ El campo 'Sexo' no puede estar vacío.")
+    if not (15 <= edad <= 100):
+        errores.append("❌ La edad debe estar entre 15 y 100 años.")
+
+    # Mostrar errores si existen
+    if errores:
+        for e in errores:
+            st.error(e)
     else:
         # === CONSTRUCCIÓN DEL CÓDIGO ===
         pais_code = pais_seleccionado[:3].upper()
