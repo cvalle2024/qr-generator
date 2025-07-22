@@ -70,8 +70,8 @@ if generar:
         errores.append("❌ El campo 'Iniciales' no puede estar vacío.")
     elif len(iniciales.strip()) > 4:
         errores.append("❌ Las iniciales deben tener máximo 4 letras.")
-    elif len(iniciales.strip()) == 4:
-        st.info("ℹ️ Ya ingresaste las 4 letras requeridas en el campo 'Iniciales'.")
+    #elif len(iniciales.strip()) == 4:
+        #st.info("ℹ️ Ya ingresaste las 4 letras requeridas en el campo 'Iniciales'.")
     if not dia:
         errores.append("❌ El campo 'Día' no puede estar vacío.")
     if not mes:
