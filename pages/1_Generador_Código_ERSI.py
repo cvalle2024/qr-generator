@@ -86,7 +86,12 @@ if generar:
             st.error(e)
     else:
         # === CONSTRUCCIÓN DEL CÓDIGO ===
-        pais_code = pais_seleccionado[:3].upper()
+        #pais_code = pais_seleccionado[:3].upper()
+        palabra_pais=pais_seleccionado.split()
+        if len(palabra_pais)== 1:
+            pais_code=palabra_psis[0][:3].upper()
+        else:
+            pais_code=''.join([p[0] for p in palabra_pais])[:3].upper()
         iniciales_code = iniciales.strip().upper()
         dia_str = f"{int(dia):02}"
         mes_code = mes.upper()
