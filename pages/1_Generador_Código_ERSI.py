@@ -92,9 +92,9 @@ if generar:
         if len(letras_iniciales) >= 3:
             pais_code = letras_iniciales[:3].upper()
         else:
-            segunda_palabra = palabras_pais[1] if len(palabras_pais) > 1 else ""
-            extra = segunda_palabra[1] if len(segunda_palabra) > 1 else ""
-            pais_code = (letras_iniciales + extra).upper()[:3]
+            ultima_palabra = palabras_pais[-1]
+            letras_extra = ''.join([c for c in ultima_palabra[1:] if c.isalpha()])
+            pais_code = (letras_iniciales + letras_extra)[:3].upper()
 
         iniciales_code = iniciales.strip().upper()
         dia_str = f"{int(dia):02}"
