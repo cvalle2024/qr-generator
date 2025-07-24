@@ -12,8 +12,8 @@ if not st.session_state["autenticado"]:
     if password == "clave_ersi123":  # Cambia la contraseña aquí
         st.session_state["autenticado"] = True
         st.success("✅ Acceso concedido. Puede continuar.")
-        st.experimental_rerun()
-    else:
+        #st.experimental_rerun()
+    #else:
         st.stop()
 
 # === INTERFAZ UNA VEZ AUTENTICADO ===
