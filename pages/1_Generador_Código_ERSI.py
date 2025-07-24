@@ -6,6 +6,13 @@ import re
 from google.oauth2.service_account import Credentials
 
 
+# Verificación de sesión: si no está logueado, redirigir al login
+if "logueado" not in st.session_state or not st.session_state.logueado:
+    st.warning("⚠️ Debe iniciar sesión para acceder.")
+    st.stop()
+
+
+
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
