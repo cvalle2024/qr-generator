@@ -9,14 +9,14 @@ if "autenticado" not in st.session_state:
 if not st.session_state["autenticado"]:
     st.markdown("### 🔒 Acceso restringido al sistema ERSI")
     password = st.text_input("Ingrese la contraseña", type="password")
-    if password == "clave_ersi123":  # Cambia la contraseña aquí
+    if password == "clave_ersi123":  # Cambia esta clave según necesidad
         st.session_state["autenticado"] = True
-        st.success("✅ Acceso concedido. Puede continuar.")
+        st.success("✅ Acceso concedido.")
         #st.experimental_rerun()
     #else:
         st.stop()
 
-# === INTERFAZ UNA VEZ AUTENTICADO ===
+# === INTERFAZ PRINCIPAL (solo visible si autenticado) ===
 st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
 st.write("Seleccione una opción:")
 
