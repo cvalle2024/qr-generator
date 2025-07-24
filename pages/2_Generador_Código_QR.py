@@ -4,6 +4,12 @@ import streamlit as st
 import io
 import streamlit as st
 
+# Verificación de sesión: si no está logueado, redirigir al login
+if "logueado" not in st.session_state or not st.session_state.logueado:
+    st.warning("⚠️ Debe iniciar sesión para acceder.")
+    st.stop()
+
+
 
 st.set_page_config(page_title="Generador de código QR para Reclutadores", page_icon="✅", layout="centered")
 st.title("🔐 Generador de código QR para Reclutadores")
