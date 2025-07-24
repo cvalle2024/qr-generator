@@ -50,4 +50,5 @@ else:
     if st.button("Cerrar sesión"):
         st.session_state.logueado = False
         st.session_state.usuario = ""
-        st.experimental_rerun()
+        st.rerun()
+        #st.experimental_rerun()
