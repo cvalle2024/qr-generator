@@ -1,12 +1,17 @@
-# app.py (el archivo que se ejecutará primero)
 import streamlit as st
 
-# Inicializa sesión
+st.set_page_config(page_title="Redireccionando...", layout="centered")
+
+# Inicializa autenticación
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
-# Redirige al login si no ha iniciado sesión
+# Mostrar redirección basada en sesión
 if not st.session_state["autenticado"]:
-    st.switch_page("Login")
+    st.markdown("""
+        <meta http-equiv="refresh" content="0; url=/Login" />
+        """, unsafe_allow_html=True)
 else:
-    st.switch_page("Home")
+    st.markdown("""
+        <meta http-equiv="refresh" content="0; url=/Home" />
+        """, unsafe_allow_html=True)
