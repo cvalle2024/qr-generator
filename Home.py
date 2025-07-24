@@ -1,61 +1,61 @@
 import streamlit as st
 import random
 
-# === Configuración de la página ===
+# === CONFIGURACIÓN ===
 st.set_page_config(page_title="Centro ERSI", layout="centered")
 
-# === Usuarios válidos ===
 USUARIOS_VALIDOS = {
     "admin": "1234",
     "reclutador": "ersi2025"
 }
 
-# === Inicializar estado de sesión ===
+# === SESIÓN ===
 if "logueado" not in st.session_state:
     st.session_state.logueado = False
+if "verificado" not in st.session_state:
+    st.session_state.verificado = False
 if "usuario" not in st.session_state:
     st.session_state.usuario = ""
-if "captcha_valido" not in st.session_state:
-    st.session_state.captcha_valido = False
-if "num1" not in st.session_state:
-    st.session_state.num1 = random.randint(1, 9)
-if "num2" not in st.session_state:
-    st.session_state.num2 = random.randint(1, 9)
+if "codigo_verificacion" not in st.session_state:
+    st.session_state.codigo_verificacion = None
 
-# === Login con CAPTCHA ===
+# === LOGIN ===
 if not st.session_state.logueado:
     st.title("🔐 Iniciar sesión")
 
     usuario = st.text_input("Usuario")
     clave = st.text_input("Contraseña", type="password")
+    login = st.button("Ingresar")
 
-    # CAPTCHA
-    st.write("Verificación humana:")
-    captcha_input = st.text_input(f"¿Cuánto es {st.session_state.num1} + {st.session_state.num2}?")
-
-    if st.button("Ingresar"):
-        if captcha_input.strip() == str(st.session_state.num1 + st.session_state.num2):
-            st.session_state.captcha_valido = True
+    if login:
+        if usuario in USUARIOS_VALIDOS and clave == USUARIOS_VALIDOS[usuario]:
+            # Crear código de verificación (ej. 4 dígitos)
+            codigo = str(random.randint(1000, 9999))
+            st.session_state.codigo_verificacion = codigo
+            st.session_state.usuario = usuario
+            st.session_state.logueado = True
+            st.session_state.verificado = False
+            st.rerun()
         else:
-            st.error("❌ CAPTCHA incorrecto. Inténtalo de nuevo.")
-            # Cambiar los números aleatorios
-            st.session_state.num1 = random.randint(1, 9)
-            st.session_state.num2 = random.randint(1, 9)
-            st.stop()
+            st.error("Usuario o contraseña incorrectos.")
 
-        if st.session_state.captcha_valido:
-            if usuario in USUARIOS_VALIDOS and clave == USUARIOS_VALIDOS[usuario]:
-                st.session_state.logueado = True
-                st.session_state.usuario = usuario
-                st.rerun()
-            else:
-                st.error("Usuario o contraseña incorrectos.")
-                st.session_state.captcha_valido = False
-                st.session_state.num1 = random.randint(1, 9)
-                st.session_state.num2 = random.randint(1, 9)
+# === VERIFICACIÓN POR CÓDIGO ===
+elif st.session_state.logueado and not st.session_state.verificado:
+    st.title("🔐 Verificación adicional")
 
-# === Contenido de la app una vez logueado ===
-else:
+    st.write("Por seguridad, ingrese el siguiente código para continuar:")
+    st.code(st.session_state.codigo_verificacion, language="bash")  # visible para pruebas
+    codigo_ingresado = st.text_input("Código de verificación", max_chars=4)
+
+    if st.button("Verificar"):
+        if codigo_ingresado == st.session_state.codigo_verificacion:
+            st.session_state.verificado = True
+            st.rerun()
+        else:
+            st.error("Código incorrecto.")
+
+# === CONTENIDO DE LA APP ===
+elif st.session_state.verificado:
     st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
     st.write(f"Hola, **{st.session_state.usuario}**. Seleccione una opción:")
 
@@ -69,8 +69,7 @@ else:
         if st.button("🔐 Generar Código QR"):
             st.switch_page("pages/2_Generador_Código_QR.py")
 
-    # Botón para cerrar sesión
     if st.button("Cerrar sesión"):
-        st.session_state.clear()  # Limpia toda la sesión
+        st.session_state.clear()
         st.rerun()
 
