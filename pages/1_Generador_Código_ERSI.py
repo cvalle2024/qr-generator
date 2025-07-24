@@ -5,7 +5,11 @@ import io
 import re
 from google.oauth2.service_account import Credentials
 
-import streamlit as st
+
+if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+    st.error("🔒 No autorizado. Por favor inicie sesión desde la página principal.")
+    st.stop()
+
 
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
     st.switch_page("pages/Login")
