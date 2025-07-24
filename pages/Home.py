@@ -1,12 +1,12 @@
 import streamlit as st
 
+if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+    st.error("🔒 No autorizado. Por favor inicie sesión desde la página principal.")
+    st.stop()
+
+
 # Configurar página
 st.set_page_config(page_title="Home")
-
-# Verificar autenticación
-if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
-    st.error("🔒 Debe iniciar sesión para acceder a esta página.")
-    st.stop()
 
 # Contenido principal
 st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
