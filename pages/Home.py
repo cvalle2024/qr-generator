@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Configurar página (título debe coincidir con switch_page("Home"))
-st.set_page_config(page_title="Home", layout="centered")
+st.set_page_config(page_title="Home")
 
 # Verificar autenticación
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
