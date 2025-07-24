@@ -5,9 +5,11 @@ import io
 import re
 from google.oauth2.service_account import Credentials
 
+import streamlit as st
+
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
-    st.error("🚫 Acceso denegado. Por favor inicie sesión.")
-    st.switch_page("Login.py")
+    st.switch_page("pages/Login")
+
 
 
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
