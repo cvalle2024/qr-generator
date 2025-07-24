@@ -6,7 +6,7 @@ st.set_page_config(page_title="Centro ERSI", layout="centered")
 # Verificar si el usuario está autenticado
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
     st.warning("⚠️ Acceso no autorizado. Por favor inicie sesión.")
-    st.switch_page("Login")
+    st.switch_page("pages/Login")
 
 # Contenido principal del sistema
 st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
