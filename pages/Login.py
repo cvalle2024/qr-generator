@@ -1,36 +1,29 @@
-# pages/Login.py
 import streamlit as st
-from streamlit.runtime.scriptrunner import get_pages
-st.switch_page("Home")
 
-pages = get_pages("")
-st.subheader("🧾 Nombres de páginas válidos para switch_page():")
-for k, v in pages.items():
-    st.write("-", v["page_name"])
-
-
-
-
+# Configurar título de página
 st.set_page_config(page_title="Login", layout="centered")
 
-# Evitar mostrar menú lateral hasta autenticación
+# Ocultar menú y barra
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .css-1cpxqw2 {visibility: hidden;}  /* menú lateral nuevo */
+    .css-1cpxqw2 {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("## 🔒 Acceso al Sistema ERSI")
+
+# Entrada de contraseña
 password = st.text_input("Ingrese la contraseña", type="password")
 
 if st.button("Ingresar"):
-    if password == "clave_ersi123":  # Cambia esta clave segura
+    if password == "clave_ersi123":  # Cambia tu clave aquí
         st.session_state["autenticado"] = True
-        st.success("✅ Acceso concedido")
-        st.switch_page("Home")
+        st.success("✅ Acceso concedido. Redirigiendo...")
+        st.switch_page("Home")  # Esto funcionará si el título en Home.py es "Home"
     else:
         st.error("❌ Contraseña incorrecta.")
+
 
