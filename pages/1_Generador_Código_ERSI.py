@@ -3,15 +3,13 @@ import pandas as pd
 import gspread
 import io
 import re
+from datetime import datetime
 from google.oauth2.service_account import Credentials
 
-
-# Verificación de sesión: si no está logueado, redirigir al login
+# === VERIFICACIÓN DE SESIÓN ===
 if "logueado" not in st.session_state or not st.session_state.logueado:
     st.warning("⚠️ Debe iniciar sesión para acceder.")
     st.stop()
-
-
 
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -45,7 +43,6 @@ paises_disponibles = sorted(df_centros["País"].dropna().unique())
 pais_seleccionado = st.selectbox("País", paises_disponibles)
 
 df_filtrado_pais = df_centros[df_centros["País"] == pais_seleccionado]
-
 departamentos_disponibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
 departamento_seleccionado = st.selectbox("Departamento", departamentos_disponibles)
 
@@ -67,7 +64,6 @@ with st.form("ersi_formulario"):
 if generar:
     errores = []
 
-    # Validaciones detalladas de campos
     if not pais_seleccionado:
         errores.append("❌ El campo 'País' no puede estar vacío.")
     if not departamento_seleccionado:
@@ -78,8 +74,6 @@ if generar:
         errores.append("❌ El campo 'Iniciales' no puede estar vacío.")
     elif len(iniciales.strip()) > 4:
         errores.append("❌ Las iniciales deben tener máximo 4 letras.")
-    #elif len(iniciales.strip()) == 4:
-        #st.info("ℹ️ Ya ingresaste las 4 letras requeridas en el campo 'Iniciales'.")
     if not dia:
         errores.append("❌ El campo 'Día' no puede estar vacío.")
     if not mes:
@@ -89,7 +83,6 @@ if generar:
     if not (15 <= edad <= 100):
         errores.append("❌ La edad debe estar entre 15 y 100 años.")
 
-    # Mostrar errores si existen
     if errores:
         for e in errores:
             st.error(e)
@@ -108,10 +101,9 @@ if generar:
         dia_str = f"{int(dia):02}"
         mes_code = mes.upper()
         sexo_code = "H" if sexo == "Hombre" else "M"
-
         base = f"{pais_code}-{iniciales_code}{dia_str}{mes_code}-{sexo_code}"
 
-        # === CÁLCULO DE CORRELATIVO GLOBAL ÚNICO ===
+        # === CÁLCULO DE CORRELATIVO ===
         try:
             existing_data = pd.DataFrame(sheet.get_all_records())
         except Exception as e:
@@ -120,17 +112,14 @@ if generar:
 
         if not existing_data.empty and "Código ERSI Único" in existing_data.columns:
             codigos = existing_data["Código ERSI Único"].dropna().tolist()
-            correlativos = []
-            for c in codigos:
-                match = re.search(r"-(\d{3})$", c)
-                if match:
-                    correlativos.append(int(match.group(1)))
+            correlativos = [int(re.search(r"-(\d{3})$", c).group(1)) for c in codigos if re.search(r"-(\d{3})$", c)]
             siguiente_numero = max(correlativos) + 1 if correlativos else 1
         else:
             siguiente_numero = 1
 
         sufijo = f"{siguiente_numero:03}"
         codigo_ersi = f"{base}-{sufijo}"
+        fecha_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # === GUARDAR DATOS ===
         nuevo = {
@@ -141,7 +130,8 @@ if generar:
             "Fecha de Nacimiento": f"{dia_str}-{mes_code}",
             "Sexo": sexo,
             "Edad": edad,
-            "Código ERSI Único": codigo_ersi
+            "Código ERSI Único": codigo_ersi,
+            "Fecha de Registro": fecha_registro
         }
 
         st.session_state["registro"].append(nuevo)
@@ -156,7 +146,8 @@ if generar:
                 nuevo["Fecha de Nacimiento"],
                 nuevo["Sexo"],
                 nuevo["Edad"],
-                nuevo["Código ERSI Único"]
+                nuevo["Código ERSI Único"],
+                nuevo["Fecha de Registro"]
             ])
             st.success("✅ Código generado y guardado exitosamente")
         except Exception as e:
@@ -180,12 +171,13 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 st.markdown("Seleccione Generar código QR:")
 
 if "ultimo_ersi" in st.session_state:
     if st.button("🧾 Generar código QR"):
         st.switch_page("pages/2_Generador_Código_QR.py")
 else:
-    #st.warning("⚠️ Primero debe generar un código ERSI antes de poder generar el código QR.")
     st.button("🧾 Generar código QR", disabled=True)
+
 
