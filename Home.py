@@ -27,7 +27,8 @@ if not st.session_state.logueado:
         if usuario in USUARIOS_VALIDOS and clave == USUARIOS_VALIDOS[usuario]:
             st.session_state.logueado = True
             st.session_state.usuario = usuario
-            st.experimental_rerun()
+            #st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Usuario o contraseña incorrectos.")
 else:
