@@ -5,6 +5,11 @@ import io
 import re
 from google.oauth2.service_account import Credentials
 
+# Verificación de autenticación
+if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+    st.error("🚫 Acceso denegado. Por favor, ingrese desde la página principal.")
+    st.stop()
+
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
