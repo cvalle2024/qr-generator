@@ -1,19 +1,22 @@
 import streamlit as st
 
-# === CONFIGURACIÓN DE LA PÁGINA ===
 st.set_page_config(page_title="Centro ERSI", layout="centered")
 
-# === AUTENTICACIÓN SIMPLE CON CONTRASEÑA ===
-def autenticar_usuario():
-    st.markdown("### 🔒 Acceso restringido")
-    password = st.text_input("Ingrese la contraseña para acceder al sistema", type="password")
-    if password != "clave_ersi123":  # 🔐 Puedes cambiar esta contraseña por la que desees
-        st.warning("⚠️ Contraseña incorrecta o vacía. Acceso denegado.")
+# === CONTROL DE AUTENTICACIÓN ===
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    st.markdown("### 🔒 Acceso restringido al sistema ERSI")
+    password = st.text_input("Ingrese la contraseña", type="password")
+    if password == "clave_ersi123":  # Cambia la contraseña aquí
+        st.session_state["autenticado"] = True
+        st.success("✅ Acceso concedido. Puede continuar.")
+        st.experimental_rerun()
+    else:
         st.stop()
 
-autenticar_usuario()  # ← Protege toda la aplicación desde la portada
-
-# === INTERFAZ PRINCIPAL ===
+# === INTERFAZ UNA VEZ AUTENTICADO ===
 st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
 st.write("Seleccione una opción:")
 
@@ -26,3 +29,4 @@ with col1:
 with col2:
     if st.button("🔐 Generar código QR"):
         st.switch_page("pages/2_Generador_Código_QR.py")
+
