@@ -22,7 +22,8 @@ if st.button("Ingresar"):
     if password == "clave_ersi123":  # Cambia tu clave aquí
         st.session_state["autenticado"] = True
         st.success("✅ Acceso concedido. Redirigiendo...")
-        st.switch_page("Home")  # Esto funcionará si el título en Home.py es "Home"
+        st.markdown('<meta http-equiv="refresh" content="0;URL=../Home">', unsafe_allow_html=True)
+
     else:
         st.error("❌ Contraseña incorrecta.")
 
