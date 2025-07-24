@@ -1,23 +1,8 @@
-import streamlit as st
-
-if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
-    st.error("🔒 No autorizado. Por favor inicie sesión desde la página principal.")
-    st.stop()
-
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 import io
 import streamlit as st
-
-
-if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
-    st.error("🔒 No autorizado. Por favor inicie sesión desde la página principal.")
-    st.stop()
-
-if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
-    st.switch_page("pages/Login")
-
 
 
 st.set_page_config(page_title="Generador de código QR para Reclutadores", page_icon="✅", layout="centered")
