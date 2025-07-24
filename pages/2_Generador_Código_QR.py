@@ -107,3 +107,9 @@ if generar and texto_qr and nombre_clinica:
         mime="image/png"
     )
 
+# Botón de volver al menú
+st.markdown("Seleccione Menú:")
+col1, = st.columns(1)
+with col1:
+    if st.button(" Regresar al menú"):
+        st.switch_page("Home.py")
