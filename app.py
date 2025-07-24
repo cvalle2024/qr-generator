@@ -2,6 +2,10 @@ import streamlit as st
 
 st.set_page_config(page_title="Login", layout="centered")
 
+# Redirige si ya está autenticado
+if st.session_state.get("autenticado") == True:
+    st.switch_page("Home")
+
 # Ocultar elementos visuales
 st.markdown("""
     <style>
@@ -13,10 +17,12 @@ st.markdown("""
 st.markdown("## 🔒 Acceso al Sistema ERSI")
 
 password = st.text_input("Ingrese la contraseña", type="password")
+
 if st.button("Ingresar"):
-    if password == "@aguilanegra":
+    if password == "clave_ersi123":
         st.session_state["autenticado"] = True
         st.success("✅ Acceso concedido")
-        st.switch_page("Home")
+        st.experimental_rerun()  # 👉 Esto re-ejecuta app.py y entra al if superior
     else:
         st.error("❌ Contraseña incorrecta.")
+
