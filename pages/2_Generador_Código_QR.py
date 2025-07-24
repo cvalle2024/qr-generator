@@ -1,3 +1,9 @@
+import streamlit as st
+
+if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+    st.error("🔒 No autorizado. Por favor inicie sesión desde la página principal.")
+    st.stop()
+
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
