@@ -1,5 +1,8 @@
 import streamlit as st
 
+st.set_page_config(page_title="Home")
+
+
 # Proteger con sesión
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
     st.switch_page("Login")  # Esto sí es válido si Login.py está en /pages/
