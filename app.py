@@ -7,6 +7,6 @@ if "autenticado" not in st.session_state:
 
 # Redirige al login si no ha iniciado sesión
 if not st.session_state["autenticado"]:
-    st.switch_page("pages/Login")
+    st.switch_page("Login")
 else:
     st.switch_page("Home")
