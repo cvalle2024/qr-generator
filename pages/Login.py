@@ -1,6 +1,16 @@
 # pages/Login.py
 import streamlit as st
 
+import streamlit as st
+from streamlit.runtime.scriptrunner import get_pages
+
+pages = get_pages("")
+st.subheader("🧾 Nombres de páginas válidos para switch_page():")
+for k, v in pages.items():
+    st.write("-", v["page_name"])
+
+
+
 st.set_page_config(page_title="Login", layout="centered")
 
 # Evitar mostrar menú lateral hasta autenticación
