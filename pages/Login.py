@@ -1,6 +1,7 @@
 # pages/Login.py
 import streamlit as st
 from streamlit.runtime.scriptrunner import get_pages
+st.switch_page("Home")
 
 pages = get_pages("")
 st.subheader("🧾 Nombres de páginas válidos para switch_page():")
