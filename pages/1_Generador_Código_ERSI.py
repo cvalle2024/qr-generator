@@ -177,4 +177,11 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+st.markdown("Seleccione Generar código QR:")
 
+if "ultimo_ersi" in st.session_state:
+    if st.button("🧾 Generar código QR"):
+        st.switch_page("pages/2_Generador_QR.py")
+else:
+    #st.warning("⚠️ Primero debe generar un código ERSI antes de poder generar el código QR.")
+    st.button("🧾 Generar código QR", disabled=True)
