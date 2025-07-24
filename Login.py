@@ -9,7 +9,7 @@ if "autenticado" not in st.session_state:
 
 # Si ya está autenticado, ir a Home directamente
 if st.session_state["autenticado"]:
-    st.switch_page("Home.py")
+    st.switch_page("Home")
 
 # Interfaz de login
 st.markdown("## 🔒 Acceso al Sistema ERSI")
