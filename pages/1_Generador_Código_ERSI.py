@@ -185,3 +185,4 @@ if "ultimo_ersi" in st.session_state:
 else:
     #st.warning("⚠️ Primero debe generar un código ERSI antes de poder generar el código QR.")
     st.button("🧾 Generar código QR", disabled=True)
+
