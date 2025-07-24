@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="Centro ERSI", layout="centered")
+st.switch_page("Centro ERSI"), layout="centered")
 
 st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
 st.write("Seleccione una opción:")
