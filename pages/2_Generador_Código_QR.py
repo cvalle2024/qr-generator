@@ -2,10 +2,8 @@ import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 import io
-import textwrap
 
 st.set_page_config(page_title="Generador de código QR para Reclutadores", page_icon="✅", layout="centered")
-
 st.title("🔐 Generador de código QR para Reclutadores")
 st.write("Complete la información y genere un código QR")
 
@@ -16,73 +14,85 @@ valor_por_defecto = st.session_state.get("ultimo_ersi", "")
 with st.form("qr_form"):
     texto_qr = st.text_input("Código único del Reclutador", value=valor_por_defecto)
     nombre_clinica = st.text_input("Nombre de la clínica o lugar", "")
-    telefono = st.text_input("Número telefonico del TBAC", "")
+    telefono = st.text_input("Número telefónico del TBAC", "")
 
     generar = st.form_submit_button("Generar código QR")
 
-# === Lógica ===
+# === Lógica QR ===
 if generar and texto_qr and nombre_clinica:
-    # Texto fijo
-    texto_fijo = "Con este código podrás presentarte para ser atendido en la clínica o lugar: "
+    # === Preparar mensajes ===
+    texto_fijo_1 = "¡Hazlo por ti! Con este código puedes acercarte a la clínica o lugar"
+    texto_clinica = nombre_clinica.strip()
+    texto_fijo_2 = "y hacerte una prueba de VIH gratuita, rápida y 100% confidencial."
+    texto_telefono = f"Tel: {telefono.strip()}" if telefono.strip() else ""
+    texto_final = "Tu salud es tu poder. ¡Conócete, cuídate, vive!"
 
-    # Construir texto variable combinando clínica y teléfono
-    texto_variable = nombre_clinica
-    if telefono.strip():
-        texto_variable += f" | Tel: {telefono.strip()}"
-
-    # Crear QR
+    # === Crear QR ===
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     qr.add_data(texto_qr)
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-
     ancho_qr, alto_qr = qr_img.size
 
-    # Cargar fuente
+    # === Cargar fuentes con tamaños diferenciados ===
     try:
-        fuente_normal = ImageFont.truetype("DejaVuSans.ttf", 14)
-        fuente_negrita = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
+        fuente_normal = ImageFont.truetype("DejaVuSans.ttf", 16)
+        fuente_clinica = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
+        fuente_telefono = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
     except:
         fuente_normal = ImageFont.load_default()
-        fuente_negrita = ImageFont.load_default()
+        fuente_clinica = ImageFont.load_default()
+        fuente_telefono = ImageFont.load_default()
 
-    # Preparar líneas de texto
-    max_chars_per_line = ancho_qr // 10
-    texto_fijo_lineas = textwrap.wrap(texto_fijo, width=max_chars_per_line)
-    texto_variable_lineas = textwrap.wrap(texto_variable, width=max_chars_per_line)
+    draw_temp = ImageDraw.Draw(qr_img)
 
-    num_lineas = len(texto_fijo_lineas) + len(texto_variable_lineas)
-    altura_texto = 20 * num_lineas + 20
-    alto_total = alto_qr + altura_texto
+    # === Función para dividir texto por líneas ajustado al ancho ===
+    def dividir_en_lineas(texto, fuente, max_ancho):
+        palabras = texto.split()
+        lineas = []
+        linea = ""
+        for palabra in palabras:
+            prueba = f"{linea} {palabra}".strip()
+            if draw_temp.textbbox((0, 0), prueba, font=fuente)[2] <= max_ancho:
+                linea = prueba
+            else:
+                lineas.append(linea)
+                linea = palabra
+        if linea:
+            lineas.append(linea)
+        return [(l, fuente) for l in lineas]
 
-    # Imagen final
+    # === Preparar líneas ===
+    lineas = []
+    lineas += dividir_en_lineas(texto_fijo_1, fuente_normal, ancho_qr - 20)
+    lineas += dividir_en_lineas(texto_clinica, fuente_clinica, ancho_qr - 20)
+    lineas += dividir_en_lineas(texto_fijo_2, fuente_normal, ancho_qr - 20)
+    if texto_telefono:
+        lineas += dividir_en_lineas(texto_telefono, fuente_telefono, ancho_qr - 20)
+    lineas += dividir_en_lineas(texto_final, fuente_normal, ancho_qr - 20)
+
+    # === Calcular alto total ===
+    alto_texto = len(lineas) * (fuente_normal.size + 10) + 20
+    alto_total = alto_qr + alto_texto
+
+    # === Imagen final ===
     imagen_final = Image.new("RGB", (ancho_qr, alto_total), "white")
     imagen_final.paste(qr_img, (0, 0))
     draw = ImageDraw.Draw(imagen_final)
 
-    # Agregar texto fijo
-    y_texto = alto_qr + 5
-    for linea in texto_fijo_lineas:
-        ancho_linea = draw.textlength(linea, font=fuente_normal)
-        x_texto = (ancho_qr - ancho_linea) // 2
-        draw.text((x_texto, y_texto), linea, fill="black", font=fuente_normal)
-        y_texto += 20
+    # === Dibujar texto ===
+    y = alto_qr + 10
+    for linea, fuente in lineas:
+        x = (ancho_qr - draw.textbbox((0, 0), linea, font=fuente)[2]) // 2
+        draw.text((x, y), linea, font=fuente, fill="black")
+        y += fuente.size + 10
 
-    # Agregar texto variable (clínica y teléfono) en negrita
-    for linea in texto_variable_lineas:
-        ancho_linea = draw.textlength(linea, font=fuente_negrita)
-        x_texto = (ancho_qr - ancho_linea) // 2
-        draw.text((x_texto, y_texto), linea, fill="black", font=fuente_negrita)
-        y_texto += 20
+    # === Mostrar imagen
+    st.image(imagen_final, caption="Código QR generado", use_column_width=False)
 
-    # Mostrar en pantalla
-    st.image(imagen_final, caption="Código QR Generado", use_column_width=False)
-
-    # Nombre del archivo
+    # === Descargar QR
     nombre_base = nombre_clinica.replace(" ", "_").replace("/", "-")
     nombre_archivo = f"QR_{nombre_base}.png"
-
-    # Descargar
     buffer = io.BytesIO()
     imagen_final.save(buffer, format="PNG")
     st.download_button(
@@ -91,3 +101,4 @@ if generar and texto_qr and nombre_clinica:
         file_name=nombre_archivo,
         mime="image/png"
     )
+
