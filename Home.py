@@ -3,6 +3,9 @@ import streamlit as st
 
 st.set_page_config(page_title="Centro ERSI", layout="centered")
 
+if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+    st.switch_page("pages/Login")
+
 # Verificar si el usuario está autenticado
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
     st.warning("⚠️ Acceso no autorizado. Por favor inicie sesión.")
