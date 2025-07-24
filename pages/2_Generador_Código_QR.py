@@ -3,6 +3,11 @@ from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 import io
 
+# Verificación de autenticación
+if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+    st.error("🚫 Acceso denegado. Por favor, ingrese desde la página principal.")
+    st.stop()
+
 st.set_page_config(page_title="Generador de código QR para Reclutadores", page_icon="✅", layout="centered")
 st.title("🔐 Generador de código QR para Reclutadores")
 st.write("Complete la información y genere un código QR")
