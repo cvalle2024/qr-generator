@@ -24,7 +24,7 @@ if generar and texto_qr and nombre_clinica:
     texto_fijo_1 = "¡Hazlo por ti! Con este código puedes acercarte a la clínica o lugar"
     texto_clinica = nombre_clinica.strip()
     texto_fijo_2 = "y hacerte una prueba de VIH gratuita, rápida y 100% confidencial."
-    texto_telefono = f"Tel: {telefono.strip()}" if telefono.strip() else ""
+    texto_telefono = f"Contactanos : {telefono.strip()}" if telefono.strip() else ""
     texto_final = "Tu salud es tu poder. ¡Conócete, cuídate, vive!"
 
     # === Crear QR ===
