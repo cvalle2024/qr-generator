@@ -1,11 +1,12 @@
 import streamlit as st
 
-# Configurar página (título debe coincidir con switch_page("Home"))
+# Configurar página
 st.set_page_config(page_title="Home")
 
 # Verificar autenticación
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
-    st.switch_page("Login")
+    st.error("🔒 Debe iniciar sesión para acceder a esta página.")
+    st.stop()
 
 # Contenido principal
 st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
@@ -20,3 +21,4 @@ with col1:
 with col2:
     if st.button("🔐 Generar Código QR"):
         st.switch_page("2_Generador_Código_QR")
+
