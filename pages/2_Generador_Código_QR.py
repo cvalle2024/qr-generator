@@ -65,7 +65,7 @@ if generar:
         # === Preparar textos
         texto_fijo_1 = "¡Hazlo por ti! Con este código puedes acercarte a : "
         texto_clinica = nombre_clinica.strip()
-        texto_fijo_2 = "y acceder a atención en salud, gratuita y 100% confidencial. "
+        texto_fijo_2 = "y acceder a una atención en salud, gratuita y 100% confidencial. "
         texto_telefono = f"Contáctanos al 📲: {prefijo} {telefono_formateado}" if telefono_formateado else ""
         texto_final = "Tu salud es tu poder. ¡Conócete, cuídate, vive!"
 
