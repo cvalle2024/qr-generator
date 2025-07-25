@@ -29,9 +29,9 @@ with st.form("qr_form"):
 # === Lógica QR ===
 if generar and texto_qr and nombre_clinica:
     # === Preparar mensajes ===
-    texto_fijo_1 = "¡Hazlo por ti! Con este código puedes acercarte a la clínica o lugar: "
+    texto_fijo_1 = "¡Hazlo por ti! Con este código puedes acercarte a : "
     texto_clinica = nombre_clinica.strip()
-    texto_fijo_2 = "y acceder a atención en salud, gratuita y 100% confidencial."
+    texto_fijo_2 = "y acceder a atención en salud, gratuita y 100% confidencial. "
     texto_telefono = f"Contáctanos al : {telefono.strip()}" if telefono.strip() else ""
     texto_final = "Tu salud es tu poder. ¡Conócete, cuídate, vive!"
 
