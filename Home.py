@@ -6,10 +6,10 @@ st.set_page_config(page_title="Centro ERSI", layout="centered")
 
 # === USUARIOS CON PAÍS ASIGNADO ===
 USUARIOS_VALIDOS = {
-    "honduras_user": {"clave": "1234", "pais": "Honduras"},
-    "guatemala_user": {"clave": "5678", "pais": "Guatemala"},
-    "panama_user": {"clave": "9999", "pais": "Panamá"},
-    "nicaragua_user": {"clave": "0000", "pais": "Nicaragua"}
+    "honduras_user": {"clave": "8585", "pais": "Honduras"},
+    "guatemala_user": {"clave": "5656", "pais": "Guatemala"},
+    "panama_user": {"clave": "9595", "pais": "Panamá"},
+    "nicaragua_user": {"clave": "7575", "pais": "Nicaragua"}
 }
 
 # === SESIÓN ===
