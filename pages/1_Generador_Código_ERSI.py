@@ -101,14 +101,8 @@ if generar:
             st.error(e)
     else:
         # === CONSTRUCCIÓN DEL CÓDIGO BASE ===
-        palabras_pais = pais_seleccionado.strip().split()
-        letras_iniciales = ''.join([p[0] for p in palabras_pais])
-        if len(letras_iniciales) >= 3:
-            pais_code = letras_iniciales[:3].upper()
-        else:
-            ultima_palabra = palabras_pais[-1]
-            letras_extra = ''.join([c for c in ultima_palabra[1:] if c.isalpha()])
-            pais_code = (letras_iniciales + letras_extra)[:3].upper()
+        pais_limpio = ''.join(pais_seleccionado.strip().split())  # Elimina espacios entre palabras
+        pais_code = pais_limpio[:3].upper()  # Toma las primeras 3 letras reales
 
         iniciales_code = iniciales.strip().upper()
         dia_str = f"{int(dia):02}"
