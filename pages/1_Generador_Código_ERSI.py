@@ -39,8 +39,21 @@ if "registro" not in st.session_state:
 # === SELECCIÓN DE UBICACIÓN ===
 st.markdown("### Selección de Ubicación")
 
+#paises_disponibles = sorted(df_centros["País"].dropna().unique())
+#pais_seleccionado = st.selectbox("País", paises_disponibles)
+
+# Filtrar país del usuario logueado
+usuario_pais = st.session_state.get("pais_usuario", "").strip()
 paises_disponibles = sorted(df_centros["País"].dropna().unique())
-pais_seleccionado = st.selectbox("País", paises_disponibles)
+
+# Solo mostrar el país del usuario si está definido
+if usuario_pais and usuario_pais in paises_disponibles:
+    paises_mostrados = [usuario_pais]
+else:
+    paises_mostrados = paises_disponibles  # fallback si no está definido
+
+pais_seleccionado = st.selectbox("País", paises_mostrados, index=0)
+
 
 df_filtrado_pais = df_centros[df_centros["País"] == pais_seleccionado]
 departamentos_disponibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
