@@ -10,7 +10,14 @@ from google.oauth2.service_account import Credentials
 if "logueado" not in st.session_state or not st.session_state.logueado:
     st.warning("⚠️ Debe iniciar sesión para acceder.")
     st.stop()
-
+# === PREFIJOS POR PAÍS ===
+prefijos_pais = {
+    "Honduras": "+504",
+    "Guatemala": "+502",
+    "El Salvador": "+503",
+    "Panamá": "+507",
+    "Nicaragua": "+505"
+}
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
