@@ -31,7 +31,7 @@ with st.form("qr_form"):
     texto_qr = st.text_input("Código único del Reclutador", value=valor_por_defecto)
     nombre_clinica = st.text_input("Nombre de la clínica o lugar", "")
 
-    telefono_raw = st.text_input("Número telefónico del TBAC (formato 9999-9999)", max_chars=9)
+    telefono_raw = st.text_input("☎️Número telefónico del TBAC (formato 9999-9999)", max_chars=9)
     telefono_limpio = re.sub(r"[^\d]", "", telefono_raw)
 
     if len(telefono_limpio) > 4:
