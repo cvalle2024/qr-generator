@@ -76,7 +76,7 @@ with st.form("ersi_formulario"):
     st.markdown("### 👤 Información del Reclutador")
     st.write("*Campo obligatorio")
     iniciales = st.text_input("Ingrese las últimas 2 letras del primer nombre y del primer apellido (máx. 4 letras, ej. NALO)*", max_chars=4)
-    dia = st.number_input("Día de nacimiento", min_value=1, max_value=31, step=1)
+    dia = st.number_input("Día de nacimiento*", min_value=1, max_value=31, step=1)
     mes = st.selectbox("Mes de nacimiento*", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
     sexo = st.selectbox("Sexo*", ["Hombre", "Mujer"])
     edad = st.number_input("Edad del Reclutador*", min_value=15, max_value=100, step=1)
