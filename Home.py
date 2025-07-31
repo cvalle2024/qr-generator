@@ -15,6 +15,9 @@ USUARIOS_VALIDOS = {
 }
 if "descargado" not in st.session_state:
     st.session_state.descargado= False
+if "registro" in st.session_state and st.session_state["registro"]:
+    st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión si ha generado códigos.")
+
     
 # === SESIÓN ===
 if "logueado" not in st.session_state:
@@ -75,9 +78,12 @@ elif st.session_state.verificado:
             st.switch_page("pages/2_Generador_Código_QR.py")
     
     if st.button("Cerrar sesión"):
-        st.session_state.clear()
-        st.rerun()
-    else:
+        if "registro" in st.session_state and st.session_state["registro"] and not st.session_state.descargado:
+            st.error("❌ Primero debes descargar la tabla virtual antes de cerrar sesión. ")
+       
+        else:
+            st.session_state.clear()
+            st.rerun()
         #st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión.")
-        st.error("❌ Primero debes descargar la tabla virtual antes de cerrar sesión. ")
+        
 
