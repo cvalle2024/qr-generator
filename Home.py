@@ -2,7 +2,7 @@ import streamlit as st
 import random
 
 # === CONFIGURACIÓN ===
-st.set_page_config(page_title="Centro ERSI", layout="centered")
+st.set_page_config(page_title="🗃️Centro ERSI", layout="centered")
 
 # === USUARIOS CON PAÍS ASIGNADO ===
 USUARIOS_VALIDOS = {
