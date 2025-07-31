@@ -78,6 +78,6 @@ elif st.session_state.verificado:
         st.session_state.clear()
         st.rerun()
     else:
-        st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión.")
+        #st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión.")
         st.error("❌ Primero debes descargar la tabla virtual antes de cerrar sesión. ")
 
