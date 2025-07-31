@@ -71,7 +71,7 @@ elif st.session_state.verificado:
     with col2:
         if st.button("🔐 Generar Código QR"):
             st.switch_page("pages/2_Generador_Código_QR.py")
-
+    st.warning("⚠️ Debe descargar la tabla antes de continuar.")
     if st.button("Cerrar sesión"):
         st.session_state.clear()
         st.rerun()
