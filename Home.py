@@ -13,7 +13,9 @@ USUARIOS_VALIDOS = {
     "nicaragua_user": {"clave": "7575", "pais": "Nicaragua"}
     
 }
-
+if "descargado" not in st.session_state:
+    st.session_state.descargado= False
+    
 # === SESIÓN ===
 if "logueado" not in st.session_state:
     st.session_state.logueado = False
@@ -75,4 +77,6 @@ elif st.session_state.verificado:
     if st.button("Cerrar sesión"):
         st.session_state.clear()
         st.rerun()
+    else:
+        st.error("❌ Primero debes descargar la tabla virtual antes de cerrar sesión. ")
 
