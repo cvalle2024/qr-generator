@@ -185,8 +185,8 @@ if st.session_state["registro"]:
         label="⬇️ Descargar Excel",
         data=buffer.getvalue(),
         file_name="codigos_ersi.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        on_click=lambda: st.session_state.update({"Descargado": True})
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        on_click=lambda: st.session_state.update({"descargado": True})
     )
 
 st.markdown("Seleccione Generar código QR:")
