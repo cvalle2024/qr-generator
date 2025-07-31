@@ -187,7 +187,7 @@ if st.session_state["registro"]:
         file_name="codigos_ersi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-st.warning("⚠️ Debe descargar la tabla antes de continuar.")
+
 st.markdown("Seleccione Generar código QR:")
 
 if "ultimo_ersi" in st.session_state:
