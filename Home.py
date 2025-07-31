@@ -6,6 +6,7 @@ st.set_page_config(page_title="Centro ERSI", layout="centered")
 
 # === USUARIOS CON PAÍS ASIGNADO ===
 USUARIOS_VALIDOS = {
+    "admin": {"clave": "admin_user" "pais" : "todos"},
     "honduras_user": {"clave": "8585", "pais": "Honduras"},
     "guatemala_user": {"clave": "5656", "pais": "Guatemala"},
     "panama_user": {"clave": "9595", "pais": "Panamá"},
