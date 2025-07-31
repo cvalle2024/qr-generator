@@ -44,31 +44,32 @@ if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
 # === SELECCIÓN DE UBICACIÓN ===
-st.markdown("### Selección de Ubicación",False,help="En esta sección se registra la ubicación de los Servicios de Salud que reciben asistencia técnica de VIHCA")
+# === SELECCIÓN DE UBICACIÓN ===
+st.markdown("### Selección de Ubicación", False, help="En esta sección se registra la ubicación de los Servicios de Salud que reciben asistencia técnica de VIHCA")
 
-#paises_disponibles = sorted(df_centros["País"].dropna().unique())
-#pais_seleccionado = st.selectbox("País", paises_disponibles)
-
-# Filtrar país del usuario logueado
+# Obtener país del usuario en sesión
 usuario_pais = st.session_state.get("pais_usuario", "").strip()
 paises_disponibles = sorted(df_centros["País"].dropna().unique())
 
-# Solo mostrar el país del usuario si está definido
-if usuario_pais and usuario_pais in paises_disponibles:
-    paises_mostrados = [usuario_pais]
+# Mostrar todos los países si el usuario es administrador ("todos")
+if usuario_pais.lower() == "todos":
+    paises_mostrados = paises_disponibles
 else:
-    paises_mostrados = paises_disponibles  # fallback si no está definido
+    paises_mostrados = [usuario_pais] if usuario_pais in paises_disponibles else []
 
-pais_seleccionado = st.selectbox("País", paises_mostrados, index=0)
+# Selección de país (editable solo si hay más de un país a mostrar)
+pais_seleccionado = st.selectbox("País", paises_mostrados, index=0, disabled=(len(paises_mostrados) == 1))
 
-
+# Filtrar por país seleccionado
 df_filtrado_pais = df_centros[df_centros["País"] == pais_seleccionado]
 departamentos_disponibles = sorted(df_filtrado_pais["Departamento"].dropna().unique())
 departamento_seleccionado = st.selectbox("Departamento", departamentos_disponibles)
 
+# Filtrar por departamento seleccionado
 df_filtrado_depto = df_filtrado_pais[df_filtrado_pais["Departamento"] == departamento_seleccionado]
 sitios_disponibles = sorted(df_filtrado_depto["Nombre del Sitio"].dropna().unique())
 servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles)
+
 
 # === FORMULARIO PARA DATOS PERSONALES ===
 with st.form("ersi_formulario"):
