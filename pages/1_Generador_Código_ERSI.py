@@ -181,6 +181,8 @@ if st.session_state["registro"]:
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         df.to_excel(writer, index=False, sheet_name="CodigosERSI")
 
+st.markdown("⚠️ Importante debes descargar la tabla")
+
     st.download_button(
         label="⬇️ Descargar Excel",
         data=buffer.getvalue(),
