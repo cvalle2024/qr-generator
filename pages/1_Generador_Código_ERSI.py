@@ -44,7 +44,7 @@ if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
 # === SELECCIÓN DE UBICACIÓN ===
-st.markdown("### Selección de Ubicación",False,help="Esta es información del Reclutador")
+st.markdown("### Selección de Ubicación",False,help="En esta sección se registra la ubicación de los Servicios de Salud que reciben asistencia técnica de VIHCA")
 
 #paises_disponibles = sorted(df_centros["País"].dropna().unique())
 #pais_seleccionado = st.selectbox("País", paises_disponibles)
