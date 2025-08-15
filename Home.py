@@ -9,6 +9,7 @@ USUARIOS_VALIDOS = {
     "admin_user": {"clave": "admin1589" , "pais" : "todos"},
     "honduras_user": {"clave": "8585", "pais": "Honduras"},
     "guatemala_user": {"clave": "5656", "pais": "Guatemala"},
+    "guate_user_001": {"clave": "guateuser123", "pais": "Guatemala"},
     "panama_user": {"clave": "9595", "pais": "Panamá"},
     "salvador_user": {"clave": "2552", "pais": "El Salvador"},
     "nicaragua_user": {"clave": "7575", "pais": "Nicaragua"}
