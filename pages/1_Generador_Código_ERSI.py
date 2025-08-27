@@ -165,7 +165,7 @@ if generar:
                 nuevo["Sexo"],
                 nuevo["Edad"],
                 nuevo["Código ERSI Único"],
-                nuevo["Fecha de Registro"]
+                nuevo["Fecha de Registro"],
                 nuevo["Nombre de usuario que registra"]
             ])
             st.success("✅ Código generado y guardado exitosamente")
