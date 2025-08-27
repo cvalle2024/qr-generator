@@ -148,7 +148,8 @@ if generar:
             "Sexo": sexo,
             "Edad": edad,
             "Código ERSI Único": codigo_ersi,
-            "Fecha de Registro": fecha_registro
+            "Fecha de Registro": fecha_registro,
+            "Nombre de usuario que registra": {st.session_state.usuario}
         }
 
         st.session_state["registro"].append(nuevo)
@@ -164,7 +165,8 @@ if generar:
                 nuevo["Sexo"],
                 nuevo["Edad"],
                 nuevo["Código ERSI Único"],
-                nuevo["Fecha de Registro"]
+                nuevo["Fecha de Registro"],
+                nuevo["Nombre de usuario que registra"]
             ])
             st.success("✅ Código generado y guardado exitosamente")
         except Exception as e:
