@@ -43,7 +43,7 @@ st.write("Complete el formulario para generar un código único por Reclutadores
 if "registro" not in st.session_state:
     st.session_state["registro"] = []
 
-# === SELECCIÓN DE UBICACIÓN ===
+
 # === SELECCIÓN DE UBICACIÓN ===
 st.markdown("### Selección de Ubicación", False, help="En esta sección se registra la ubicación de los Servicios de Salud que reciben asistencia técnica de VIHCA")
 
@@ -148,8 +148,8 @@ if generar:
             "Sexo": sexo,
             "Edad": edad,
             "Código ERSI Único": codigo_ersi,
-            "Fecha de Registro": fecha_registro
-            #"Nombre de usuario que registra": {st.session_state.usuario}
+            "Fecha de Registro": fecha_registro,
+            "Nombre de usuario que registra": f"{st.session_state.usuario}"
         }
 
         st.session_state["registro"].append(nuevo)
@@ -166,7 +166,7 @@ if generar:
                 nuevo["Edad"],
                 nuevo["Código ERSI Único"],
                 nuevo["Fecha de Registro"]
-                #nuevo["Nombre de usuario que registra"]
+                nuevo["Nombre de usuario que registra"]
             ])
             st.success("✅ Código generado y guardado exitosamente")
         except Exception as e:
