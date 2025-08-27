@@ -53,6 +53,7 @@ if not st.session_state.logueado:
     usuario = st.text_input("Usuario")
     clave = st.text_input("Contraseña", type="password")
     login = st.button("Ingresar")
+    st.
 
     if login:
         if usuario in USUARIOS_VALIDOS and clave == USUARIOS_VALIDOS[usuario]["clave"]:
