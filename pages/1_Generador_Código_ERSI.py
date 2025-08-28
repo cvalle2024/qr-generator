@@ -73,15 +73,53 @@ servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles)
 
 # === FORMULARIO PARA DATOS PERSONALES ===
 with st.form("ersi_formulario"):
-   
     st.markdown("### 👤 Información del Reclutador")
     st.write("*Campo obligatorio")
-    iniciales = st.text_input("Ingrese las últimas 2 letras del primer nombre y del primer apellido (máx. 4 letras, ej. NALO)*", max_chars=4)
-    dia = st.number_input("Día de nacimiento*", min_value=1, max_value=31, step=1)
-    mes = st.selectbox("Mes de nacimiento*", ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"])
-    sexo = st.selectbox("Sexo*", ["Hombre", "Mujer"])
-    edad = st.number_input("Edad del Reclutador*", min_value=15, max_value=100, step=1)
+
+    iniciales = st.text_input(
+        "Ingrese las últimas 2 letras del primer nombre y del primer apellido (máx. 4 letras, ej. NALO)*",
+        max_chars=4,
+        placeholder="Ej. NALO"
+    )
+
+    dia = st.selectbox(
+        "Día de nacimiento*",
+        options=list(range(1, 32)),
+        index=None,
+        placeholder="Selecciona el día"
+    )
+
+    mes = st.selectbox(
+        "Mes de nacimiento*",
+        options=["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"],
+        index=None,
+        placeholder="Selecciona el mes"
+    )
+
+    sexo = st.selectbox(
+        "Sexo*",
+        options=["Hombre", "Mujer"],
+        index=None,
+        placeholder="Selecciona el sexo"
+    )
+
+    edad = st.selectbox(
+        "Edad del Reclutador*",
+        options=list(range(15, 101)),
+        index=None,
+        placeholder="Selecciona la edad"
+    )
+
     generar = st.form_submit_button("Generar código único del Reclutador")
+
+# Validación al enviar
+if generar:
+    if not iniciales or dia is None or mes is None or sexo is None or edad is None:
+        st.error("Completa todos los campos marcados con *.")
+    else:
+        st.success("Datos completos. ✅")
+        # ... continúa con tu lógica
+
 
 # === LÓGICA DE GENERACIÓN DE CÓDIGO ===
 if generar:
