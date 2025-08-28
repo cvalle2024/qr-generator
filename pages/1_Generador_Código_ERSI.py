@@ -172,7 +172,7 @@ if generar:
 
         sufijo = f"{siguiente_numero:03}"
         codigo_ersi = f"{base}-{sufijo}"
-        fecha_registro = datetime.now().strftime("%Y-%m-%d")
+        fecha_registro = datetime.now().strftime("%d-%m-%Y")
 
         # === GUARDAR DATOS ===
         nuevo = {
