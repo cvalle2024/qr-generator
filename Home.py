@@ -85,7 +85,7 @@ elif st.session_state.logueado and not st.session_state.verificado:
 
 # === CONTENIDO DE LA APP ===
 elif st.session_state.verificado:
-    st.title("📲 Bienvenido al generador de códigos únicos de identificación para Reclutadores y creación de QR")
+    st.title("📲 Bienvenido al generador de códigos únicos de identificación para voluntarios y creación de QR")
     st.write(f"Hola bienvenido (a), **{st.session_state.usuario}**")
     st.write("Seleccione una opción: ⬇️")
 
