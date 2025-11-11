@@ -73,7 +73,7 @@ servicio_salud = st.selectbox("Servicio de Salud", sitios_disponibles)
 
 # === FORMULARIO PARA DATOS PERSONALES ===
 with st.form("ersi_formulario"):
-    st.markdown("### 👤 Información del Reclutador")
+    st.markdown("### 👤 Información del Voluntario")
     st.write("*Campo obligatorio")
 
     iniciales = st.text_input(
@@ -110,7 +110,7 @@ with st.form("ersi_formulario"):
         placeholder="Selecciona la edad"
     )
 
-    generar = st.form_submit_button("Generar código único del Reclutador")
+    generar = st.form_submit_button("Generar código único del Voluntario")
 
 # Validación al enviar
 if generar:
