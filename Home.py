@@ -12,6 +12,8 @@ USUARIOS_VALIDOS = {
     "copan_user" : {"clave": "copan123", "pais": "Honduras"},
     "colon_user" : {"clave": "colon123", "pais": "Honduras"},
     "paraiso_user" : {"clave": "paraiso123", "pais": "Honduras"},
+    "atlantida_user" : {"clave": "atlantida123", "pais": "Honduras"},
+    
     # USUARIOS GUATEMALA
     "guatemala_user": {"clave": "5656", "pais": "Guatemala"},
     "guate_user_001": {"clave": "guateuser123", "pais": "Guatemala"},
