@@ -77,7 +77,6 @@ if generar:
         ancho_qr, alto_qr = qr_img.size
         
         #Cragar la imagen
-        """
         logo_path="logo_vihca.png"
         logo=Image.open(logo_path).convert("RGBA")
         logo_size=int(qr_img.size[0] * 0.20)
@@ -88,45 +87,8 @@ if generar:
         logo.thumbnail((logo_max_size, logo_max_size))
 
         logo_pos = ((ancho_qr - logo.size[0]) // 2, (alto_qr - logo.size[1]) // 2)
-        qr_img.paste(logo, logo_pos, logo)
-        """
-        logo_path = "logo_vihca.png"
-        logo = Image.open(logo_path).convert("RGBA")  # para usar alfa si lo tiene
-
-        # tamaño del logo (por ejemplo 20–30% del ancho del QR)
-        factor_logo = 0.25
-        logo_size = int(ancho_qr * factor_logo)
-        logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
-
-        # === 3. Crear el "espacio en blanco" en el centro ===
-        # tamaño del recuadro blanco un poco más grande que el logo
-        padding = int(logo_size * 0.1)  # 10% de margen
-        white_box_size = logo_size + 2 * padding
-
-        # coordenadas del recuadro blanco en el centro
-        x1 = (ancho_qr - white_box_size) // 2
-        y1 = (alto_qr - white_box_size) // 2
-        x2 = x1 + white_box_size
-        y2 = y1 + white_box_size
-
-        # dibujar el rectángulo blanco
-        white_box = Image.new("RGB", (white_box_size, white_box_size), "white")
-        qr_img.paste(white_box, (x1, y1))
-
-        # === 4. Pegar el logo centrado en el recuadro ===
-        logo_pos = (
-            x1 + (white_box_size - logo_size) // 2,
-            y1 + (white_box_size - logo_size) // 2
-        )
-
-        # si tiene alfa, usarlo como máscara
-        qr_img.paste(logo, logo_pos, mask=logo)
-        
-
-        
-        
-        
-
+        qr_img.paste(logo, logo_pos, logo)        
+               
         # === Cargar fuentes
         try:
             fuente_normal = ImageFont.truetype("DejaVuSans.ttf", 16)
