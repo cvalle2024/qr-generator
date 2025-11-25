@@ -70,7 +70,7 @@ if generar:
         texto_final = "Tu salud es tu poder. ¡Conócete, cuídate, vive!"
 
         # === Crear QR
-        qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=2)
+        qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=1)
         qr.add_data(texto_qr)
         qr.make(fit=True)
         qr_img = qr.make_image(fill_color="goldenrod", back_color="white").convert("RGB")
