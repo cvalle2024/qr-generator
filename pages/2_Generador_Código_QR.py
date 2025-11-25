@@ -87,7 +87,7 @@ if generar:
         logo.thumbnail((logo_max_size, logo_max_size))
 
         logo_pos = ((ancho_qr - logo.size[0]) // 2, (alto_qr - logo.size[1]) // 2)
-        qr_img.paste(logo, logo_pos, mask=logo)
+        qr_img.paste(logo, logo_pos, logo)
         
 
         # === Cargar fuentes
