@@ -82,11 +82,12 @@ if generar:
         logo_size=int(qr_img.size[0] * 0.20)
         logo=logo.resize((logo_size,logo_size))
 
-        pos= (
-            (qr_img.size[0]-logo_size)//2,
-            (qr_img.size[1]-logo_size)//2
+        qr_width, qr_height = qr_img.size
+        logo_max_size = qr_width // 4 
+        logo.thumbnail((logo_max_size, logo_max_size))
 
-        )
+        ogo_pos = ((qr_width - logo.size[0]) // 2, (qr_height - logo.size[1]) // 2)
+        
 
         # === Cargar fuentes
         try:
