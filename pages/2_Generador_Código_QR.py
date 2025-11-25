@@ -19,8 +19,8 @@ if "logueado" not in st.session_state or not st.session_state.logueado:
     st.stop()
 
 # === Configuración de página ===
-st.set_page_config(page_title="Generador de código QR para Reclutadores", page_icon="✅", layout="centered")
-st.title("🔐 Generador de código QR para Reclutadores")
+st.set_page_config(page_title="Generador de código QR para Voluntarios", page_icon="✅", layout="centered")
+st.title("🔐 Generador de código QR para Voluntarios")
 st.write("Complete la información y genere un código QR")
 
 # === Detectar si viene desde ERSI ===
@@ -28,7 +28,7 @@ valor_por_defecto = st.session_state.get("ultimo_ersi", "")
 
 # === Formulario ===
 with st.form("qr_form"):
-    texto_qr = st.text_input("Código único del Reclutador", value=valor_por_defecto)
+    texto_qr = st.text_input("Código único del Voluntario", value=valor_por_defecto)
     nombre_clinica = st.text_input("Nombre de la clínica o lugar", "")
 
     telefono_raw = st.text_input("☎️Número telefónico del TBAC (formato 9999-9999)", max_chars=9)
@@ -48,7 +48,7 @@ if generar:
     errores = []
 
     if not texto_qr.strip():
-        errores.append("❌ El campo de código del reclutador está vacío.")
+        errores.append("❌ El campo de código del voluntario está vacío.")
     if not nombre_clinica.strip():
         errores.append("❌ El campo 'Nombre de la clínica o lugar' no puede estar vacío.")
     if not re.fullmatch(r"\d{4}-\d{4}", telefono_formateado):
@@ -73,7 +73,7 @@ if generar:
         qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
         qr.add_data(texto_qr)
         qr.make(fit=True)
-        qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        qr_img = qr.make_image(fill_color="dark blue", back_color="white").convert("RGB")
         ancho_qr, alto_qr = qr_img.size
 
         # === Cargar fuentes
