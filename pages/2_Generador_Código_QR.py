@@ -76,6 +76,17 @@ if generar:
         qr_img = qr.make_image(fill_color="darkblue", back_color="white").convert("RGB")
         ancho_qr, alto_qr = qr_img.size
 
+        
+        logo_vihca=Image.open("logo_vihca.jpg")
+        logo_size=int(qr_img.size[0] * 0.20)
+        logo_vihca=logo_vihca.resize((logo_size,logo_size))
+
+        pos= (
+            (qr_img.size[0]-logo_size)//2,
+            (qr_img.size[1]-logo_size)//2
+
+        )
+
         # === Cargar fuentes
         try:
             fuente_normal = ImageFont.truetype("DejaVuSans.ttf", 16)
