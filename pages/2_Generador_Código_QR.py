@@ -77,7 +77,7 @@ if generar:
         ancho_qr, alto_qr = qr_img.size
 
         #Cragar la imagen
-        logo_path="logo_vihca.jpg"
+        logo_path="logo_vihca.png"
         logo=Image.open(logo_path)
         logo_size=int(qr_img.size[0] * 0.20)
         logo=logo.resize((logo_size,logo_size))
