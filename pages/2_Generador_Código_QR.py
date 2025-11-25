@@ -80,7 +80,7 @@ if generar:
         logo_path="logo_vihca.jpg"
         logo=Image.open(logo_path)
         logo_size=int(qr_img.size[0] * 0.20)
-        logo=logo_vihca.resize((logo_size,logo_size))
+        logo=logo.resize((logo_size,logo_size))
 
         pos= (
             (qr_img.size[0]-logo_size)//2,
