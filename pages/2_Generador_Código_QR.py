@@ -73,7 +73,7 @@ if generar:
         qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
         qr.add_data(texto_qr)
         qr.make(fit=True)
-        qr_img = qr.make_image(fill_color="darkgoldenrod", back_color="white").convert("RGB")
+        qr_img = qr.make_image(fill_color="powderblue", back_color="white").convert("RGB")
         ancho_qr, alto_qr = qr_img.size
         
         #Cragar la imagen
