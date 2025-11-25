@@ -78,7 +78,7 @@ if generar:
 
         #Cragar la imagen
         logo_path="logo_vihca.png"
-        logo=Image.open(logo_path)
+        logo=Image.open(logo_path).convert("RGBA")
         logo_size=int(qr_img.size[0] * 0.20)
         logo=logo.resize((logo_size,logo_size))
 
