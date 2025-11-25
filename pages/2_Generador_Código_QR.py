@@ -76,10 +76,11 @@ if generar:
         qr_img = qr.make_image(fill_color="darkblue", back_color="white").convert("RGB")
         ancho_qr, alto_qr = qr_img.size
 
-        
-        logo_vihca=Image.open("logo_vihca.jpg")
+        #Cragar la imagen
+        logo_path="logo_vihca.jpg"
+        logo=Image.open(logo_path)
         logo_size=int(qr_img.size[0] * 0.20)
-        logo_vihca=logo_vihca.resize((logo_size,logo_size))
+        logo=logo_vihca.resize((logo_size,logo_size))
 
         pos= (
             (qr_img.size[0]-logo_size)//2,
