@@ -5,6 +5,8 @@ import io
 import re
 from datetime import datetime
 from google.oauth2.service_account import Credentials
+from datetime import datetime, timedelta
+
 
 # === VERIFICACIÓN DE SESIÓN ===
 if "logueado" not in st.session_state or not st.session_state.logueado:
@@ -18,6 +20,52 @@ prefijos_pais = {
     "Panamá": "+507",
     "Nicaragua": "+505"
 }
+
+
+def render_footer(org="VIHCA / M&E Regional", app_name="Generador código ERSI", version="v1.2.0"):
+    year = datetime.now().year
+    st.markdown(
+        f"""
+        <style>
+            .footer {{
+                position: fixed;
+                left: 0;
+                bottom: 0;
+                width: 100%;
+                background: rgba(120,255,255,0.92);
+                border-top: 1px solid rgba(0,0,0,0.08);
+                padding: 10px 18px;
+                text-align: center;
+                font-size: 12px;
+                color: #6b7280;
+                z-index: 9999;
+                backdrop-filter: blur(6px);
+            }}
+            .footer b {{
+                color: #111827;
+            }}
+            /* Para que el contenido no quede tapado por el footer */
+            .block-container {{
+                padding-bottom: 70px !important;
+            }}
+        </style>
+        <div class="footer">
+            © {year} <b>{org}</b> — {app_name} {version}. Todos los derechos reservados.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# Llamada (una vez)
+render_footer(org="Proyecto VIHCA", app_name="Generador de códigos ERSI", version="v1.2.0")
+
+
+
+
+
+
+
+
 # === CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ===
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(
