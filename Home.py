@@ -65,7 +65,7 @@ USUARIOS_VALIDOS = {
     "panama_user": {"clave": "9595", "pais": "Panamá"},
     #USUARIOS EL SALVADOR
     "salvador_user": {"clave": "2552", "pais": "El Salvador"},
-    "ever": {"clave": "6161", "pais": "El Salvador"},
+    "heber": {"clave": "6161", "pais": "El Salvador"},
     "michael": {"clave": "8592", "pais": "El Salvador"},
     "daniel": {"clave": "4554", "pais": "El Salvador"},
     "frank": {"clave": "2552", "pais": "El Salvador"},
