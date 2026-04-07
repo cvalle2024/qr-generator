@@ -63,12 +63,18 @@ USUARIOS_VALIDOS = {
     # USUARIOS PANAMÁ
     
     "panama_user": {"clave": "9595", "pais": "Panamá"},
-    #USUARIOS EL SALVADOR
-    "salvador_user": {"clave": "2552", "pais": "El Salvador"},
-    "heber": {"clave": "6161", "pais": "El Salvador"},
-    "michael": {"clave": "8592", "pais": "El Salvador"},
-    "daniel": {"clave": "4554", "pais": "El Salvador"},
-    "frank": {"clave": "2552", "pais": "El Salvador"},
+    #USUARIOS EL SALVADOR (11 departamentos)
+    "ahuachapan_user": {"clave": "3847", "pais": "El Salvador"},
+    "sonsonate_user": {"clave": "4629", "pais": "El Salvador"},
+    "santa_ana_user": {"clave": "6492", "pais": "El Salvador"},
+    "la_libertad_user": {"clave": "5186", "pais": "El Salvador"},
+    "san_salvador_user": {"clave": "4762", "pais": "El Salvador"},
+    "cuscatlan_user": {"clave": "5724", "pais": "El Salvador"},
+    "la_paz_user": {"clave": "9472", "pais": "El Salvador"},
+    "san_vicente_user": {"clave": "6249", "pais": "El Salvador"},
+    "san_miguel_user": {"clave": "4517", "pais": "El Salvador"},
+    "la_union_user": {"clave": "2194", "pais": "El Salvador"},
+    "usulutan_user": {"clave": "8926", "pais": "El Salvador"},
     #USUARIOS NICARAGUA
     
     "nicaragua_user": {"clave": "7575", "pais": "Nicaragua"}
@@ -148,5 +154,3 @@ elif st.session_state.verificado:
             st.session_state.clear()
             st.rerun()
         #st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión.")
-        
-
