@@ -49,10 +49,12 @@ USUARIOS_VALIDOS = {
     #USUARIOS HONDURAS
     "honduras_user": {"clave": "8585", "pais": "Honduras"},
     "copan_user" : {"clave": "copan123", "pais": "Honduras"},
-    "colon_user" : {"clave": "colon123", "pais": "Honduras"},
     "paraiso_user" : {"clave": "paraiso123", "pais": "Honduras"},
     "atlantida_user" : {"clave": "atlantida123", "pais": "Honduras"},
     "tocoa_user" : {"clave": "tocoa123", "pais": "Honduras"},
+    "cortes_user" : {"clave": "cortes123", "pais": "Honduras"},
+    "elmanchen_user" : {"clave": "elmanchen123", "pais": "Honduras"},
+    "comayagua_user" : {"clave": "comayagua123", "pais": "Honduras"},
     
     # USUARIOS GUATEMALA
     "guatemala_user": {"clave": "5656", "pais": "Guatemala"},
