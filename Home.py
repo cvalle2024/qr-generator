@@ -55,6 +55,7 @@ USUARIOS_VALIDOS = {
     "cortes_user" : {"clave": "cortes123", "pais": "Honduras"},
     "elmanchen_user" : {"clave": "elmanchen123", "pais": "Honduras"},
     "comayagua_user" : {"clave": "comayagua123", "pais": "Honduras"},
+    "zamora_user" : {"clave": "zamora123", "pais": "Honduras"},
     
     # USUARIOS GUATEMALA
     "guatemala_user": {"clave": "5656", "pais": "Guatemala"},
