@@ -7,6 +7,9 @@ from datetime import datetime
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
 
+# === CONFIGURACIÓN DE STREAMLIT ===
+# Debe ir antes de cualquier otro comando st.* para evitar errores en Streamlit.
+st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 
 # === VERIFICACIÓN DE SESIÓN ===
 if "logueado" not in st.session_state or not st.session_state.logueado:
@@ -78,13 +81,56 @@ SHEET_NAME = st.secrets["google_sheets"]["sheet_name"]
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # === CARGA DE DATOS DE CENTROS DE SALUD ===
-df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
+# Nota: el archivo actual está guardado en UTF-8.
+# Antes se forzaba latin-1 y por eso "País" se leía como "PaÃ­s".
+try:
+    df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="utf-8-sig")
+except UnicodeDecodeError:
+    # Respaldo por si en algún momento el archivo vuelve a guardarse como latin-1.
+    df_centros = pd.read_csv("centros_salud_ersi.csv", encoding="latin-1")
+
+# Limpiar nombres de columnas: quita espacios, BOM y corrige variantes comunes.
+df_centros.columns = (
+    df_centros.columns
+    .astype(str)
+    .str.replace("\ufeff", "", regex=False)
+    .str.strip()
+)
+
+renombrar_columnas = {
+    "Pais": "País",
+    "pais": "País",
+    "PAIS": "País",
+    "país": "País",
+    "PaÃ­s": "País",
+    "Departamento ": "Departamento",
+    "Nombre Sitio": "Nombre del Sitio",
+    "Sitio": "Nombre del Sitio",
+}
+df_centros = df_centros.rename(columns=renombrar_columnas)
+
+columnas_requeridas = ["País", "Departamento", "Nombre del Sitio"]
+faltantes = [col for col in columnas_requeridas if col not in df_centros.columns]
+if faltantes:
+    st.error("❌ El archivo centros_salud_ersi.csv no tiene las columnas requeridas.")
+    st.write("Columnas faltantes:", faltantes)
+    st.write("Columnas encontradas:", df_centros.columns.tolist())
+    st.stop()
+
+# Limpiar valores.
 df_centros["País"] = df_centros["País"].astype(str).str.strip()
 df_centros["Departamento"] = df_centros["Departamento"].astype(str).str.strip().str.title()
 df_centros["Nombre del Sitio"] = df_centros["Nombre del Sitio"].astype(str).str.strip().str.title()
 
+# Eliminar filas vacías accidentales.
+df_centros = df_centros.dropna(how="all")
+df_centros = df_centros[
+    (df_centros["País"].str.len() > 0)
+    & (df_centros["Departamento"].str.len() > 0)
+    & (df_centros["Nombre del Sitio"].str.len() > 0)
+].copy()
+
 # === CONFIGURACIÓN DE STREAMLIT ===
-st.set_page_config(page_title="Generador de Código ERSI", layout="centered")
 st.title("Generador de código único para Voluntarios")
 st.write("Complete el formulario para generar un código único por Voluntario.")
 
