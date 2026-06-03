@@ -1,31 +1,32 @@
-PaÌs,Departamento,Nombre del Sitio
-Honduras,Atl·ntida,ESM La Ceiba
-Honduras,Atl·ntida,San Juan Pueblo
-Honduras,Atl·ntida,Sambo Creek
+Pa√≠s,Departamento,Nombre del Sitio
+Honduras,Atl√°ntida,ESM La Ceiba
+Honduras,Atl√°ntida,San Juan Pueblo
+Honduras,Atl√°ntida,Sambo Creek
 Honduras,Choluteca,Hospital del Sur
 Honduras,Choluteca,El Triunfo
-Honduras,ColÛn,Hospital San Isidro
+Honduras,Col√≥n,Hospital San Isidro
+Honduras,Col√≥n,SAI Zamora
 Honduras,Comayagua,Hospital Regional Santa Teresa
-Honduras,Comayagua,Jose MarÌa Ochoa
+Honduras,Comayagua,Jose Mar√≠a Ochoa
 Honduras,Comayagua,Episcopal de Siguatepeque
-Honduras,Cop·n,Hospital de Occidente
-Honduras,Cop·n,Entrada a Cop·n
-Honduras,CortÈs,(CMO) Miguel Paz Barahona
-Honduras,CortÈs,IHSS - San Pedro Sula
-Honduras,CortÈs,Episcopal de SPS
-Honduras,El ParaÌso,Hospital Gabriela Alvarado
-Honduras,El ParaÌso,Luis Lazo Arriaga
-Honduras,Francisco Moraz·n,Alonso Suazo
-Honduras,Francisco Moraz·n,El Manchen
-Honduras,Francisco Moraz·n,Las Crucitas
-Honduras,Francisco Moraz·n,Hospital Escuela
-Honduras,Francisco Moraz·n,IHSS - Tegucigalpa
+Honduras,Cop√°n,Hospital de Occidente
+Honduras,Cop√°n,Entrada a Cop√°n
+Honduras,Cort√©s,(CMO) Miguel Paz Barahona
+Honduras,Cort√©s,IHSS - San Pedro Sula
+Honduras,Cort√©s,Episcopal de SPS
+Honduras,El Para√≠so,Hospital Gabriela Alvarado
+Honduras,El Para√≠so,Luis Lazo Arriaga
+Honduras,Francisco Moraz√°n,Alonso Suazo
+Honduras,Francisco Moraz√°n,El Manchen
+Honduras,Francisco Moraz√°n,Las Crucitas
+Honduras,Francisco Moraz√°n,Hospital Escuela
+Honduras,Francisco Moraz√°n,IHSS - Tegucigalpa
 Honduras,Olancho,Hospital San Francisco
 Honduras,Olancho,Policlinico Catacamas
-El Salvador,La Libertad,UDS DÌaz del Pinal
+El Salvador,La Libertad,UDS D√≠az del Pinal
 El Salvador,La Libertad,UDS Puerto de la Libertad
 El Salvador,La Libertad,UDS Ciudad Arce
-El Salvador,La Libertad,UDS Lourdes ColÛn
+El Salvador,La Libertad,UDS Lourdes Col√≥n
 El Salvador,La Libertad,UDS Quezaltepeque
 El Salvador,La Libertad,UDS San Juan Opico
 El Salvador,San Miguel,UDS Periferica San Miguel
@@ -33,72 +34,72 @@ El Salvador,San Miguel,UDS La Presita
 El Salvador,San Salvador,UDS Zacamil
 El Salvador,San Salvador,UDS Unicentro Soyapango
 El Salvador,San Salvador,UDS San Miguelito
-El Salvador,San Salvador,UDS San MartÌn
+El Salvador,San Salvador,UDS San Mart√≠n
 El Salvador,San Salvador,UDS San Marcos
 El Salvador,San Salvador,UDS San Jacinto
 El Salvador,San Salvador,UDS San Antonio Abad
 El Salvador,San Salvador,UDS Monserrat
-El Salvador,San Salvador,UDS ConcepciÛn
+El Salvador,San Salvador,UDS Concepci√≥n
 El Salvador,San Salvador,UDS Ciudad Delgado
 El Salvador,San Salvador,UDS Barrios
 El Salvador,San Salvador,UDS Apopa 
 El Salvador,San Salvador,UDS Aguilares
-El Salvador,Santa Ana,UDS Tom·s Pineda MartÌnez
+El Salvador,Santa Ana,UDS Tom√°s Pineda Mart√≠nez
 El Salvador,Sonsonate,UDS Sonzacate
 El Salvador,Sonsonate,UDS Sonsonate
-El Salvador,Santa Ana,UDS Santa B·rbara
-El Salvador,Santa Ana,UDS Metap·n
+El Salvador,Santa Ana,UDS Santa B√°rbara
+El Salvador,Santa Ana,UDS Metap√°n
 El Salvador,Santa Ana,UDS Chalchuapa
-El Salvador,Santa Ana,UDS Casa del NiÒo
-El Salvador,Ahuachap·n,UDS Atiquizaya
-El Salvador,Ahuachap·n,UDS Ahuachap·n
+El Salvador,Santa Ana,UDS Casa del Ni√±o
+El Salvador,Ahuachap√°n,UDS Atiquizaya
+El Salvador,Ahuachap√°n,UDS Ahuachap√°n
 El Salvador,Sonsonate,UDS Acajutla
-El Salvador,Cuscatl·n,UDS Cojutepeque
-El Salvador,Cuscatl·n,UDS San Rafael Cedros
+El Salvador,Cuscatl√°n,UDS Cojutepeque
+El Salvador,Cuscatl√°n,UDS San Rafael Cedros
 El Salvador,La Paz,UDS Santiago Nonualco
-El Salvador,La UniÛn,UDS La UniÛn /La Playa
-El Salvador,La UniÛn,UDS Santa Rosa de Lima
-El Salvador,San Vicente,UDS PerifÈrica San Vicente
-El Salvador,Usulut·n,UDS Usulut·n
-Panam·,Bocas del Toro,CTARV Changuinola 
-Panam·,Bocas del Toro,MINSA CAPSI Finca 30
-Panam·,Chiriqui,Centro de Salud San Mateo
-Panam·,CoclÈ,Hospital Aquilino Tejeira
-Panam·,Colon,Policentro Juan A. N˙Òez
-Panam·,Herrera,Hospital Cecilio Castillero
-Panam·,Los_Santos,Hospital Anita Moreno
-Panam·,Panam·,Centro de Salud de Santa Ana
-Panam·,Panam·,Centro de Salud del Chorrillo
-Panam·,Panam·,Torrijos Carter
-Panam·,Panam·,S/A Nuevo Veranillo
-Panam·,Panam·,S/A RÌo Abajo
-Panam·,Panam·,Centro de Salud Chilibre
-Panam·,Panam· Oeste,Centro de Salud Altos de San Francisco
-Panam·,Panam· Oeste,S/A Artemio JaÈn
-Panam·,Veraguas,S/A Cantos del Llano
-Panam·,Veraguas,Hospital Chicho Fabregas
-Panam·,Darien,C/S Santa FÈ Darien (ClÌnica TARV)
-Guatemala,Escuintla,Unidad de AtenciÛn Diferenciada (ClÌnica Barcelona)
+El Salvador,La Uni√≥n,UDS La Uni√≥n /La Playa
+El Salvador,La Uni√≥n,UDS Santa Rosa de Lima
+El Salvador,San Vicente,UDS Perif√©rica San Vicente
+El Salvador,Usulut√°n,UDS Usulut√°n
+Panam√°,Bocas del Toro,CTARV Changuinola 
+Panam√°,Bocas del Toro,MINSA CAPSI Finca 30
+Panam√°,Chiriqui,Centro de Salud San Mateo
+Panam√°,Cocl√©,Hospital Aquilino Tejeira
+Panam√°,Colon,Policentro Juan A. N√∫√±ez
+Panam√°,Herrera,Hospital Cecilio Castillero
+Panam√°,Los_Santos,Hospital Anita Moreno
+Panam√°,Panam√°,Centro de Salud de Santa Ana
+Panam√°,Panam√°,Centro de Salud del Chorrillo
+Panam√°,Panam√°,Torrijos Carter
+Panam√°,Panam√°,S/A Nuevo Veranillo
+Panam√°,Panam√°,S/A R√≠o Abajo
+Panam√°,Panam√°,Centro de Salud Chilibre
+Panam√°,Panam√° Oeste,Centro de Salud Altos de San Francisco
+Panam√°,Panam√° Oeste,S/A Artemio Ja√©n
+Panam√°,Veraguas,S/A Cantos del Llano
+Panam√°,Veraguas,Hospital Chicho Fabregas
+Panam√°,Darien,C/S Santa F√© Darien (Cl√≠nica TARV)
+Guatemala,Escuintla,Unidad de Atenci√≥n Diferenciada (Cl√≠nica Barcelona)
 Guatemala,Escuintla,CS Santa Lucia Cotzumalguapa
 Guatemala,Guatemala,CAS
 Guatemala,Guatemala,CS Zona 3
-Guatemala,Guatemala,FundaciÛn Marco Antonio
+Guatemala,Guatemala,Fundaci√≥n Marco Antonio
 Guatemala,Guatemala,OTRANS
 Guatemala,Izabal,CS Puerto Barrios
 Guatemala,Izabal,CAP Morales
-Guatemala,PetÈn,CS Flores
+Guatemala,Pet√©n,CS Flores
 Guatemala,Quetzaltenango,CS Quetzaltenango
 Guatemala,Quetzaltenango,CS Coatepeque
 Guatemala,Quetzaltenango,CS La Esperanza
 Guatemala,Huehuetenango,Centro de Salud Sur
 Guatemala,Chiquimula,CS Salud Esquipulas
-Guatemala,Alta Verapaz,CS Cob·n 
+Guatemala,Alta Verapaz,CS Cob√°n 
 Guatemala,Izabal,CAP Livingston
 Guatemala,Zacapa,CS Zacapa
 Guatemala,Jutiapa,CS Jutiapa
-Guatemala,Guatemala,AsociaciÛn SOMOS
+Guatemala,Guatemala,Asociaci√≥n SOMOS
 Nicaragua,Chinandega,SILAIS Chinandega
-Nicaragua,LeÛn,SILAIS LeÛn
+Nicaragua,Le√≥n,SILAIS Le√≥n
 Nicaragua,Managua,SILAIS Managua
 Nicaragua,Masaya,SILAIS Masaya
 Nicaragua,Chontales,SILAIS Chontales
