@@ -166,7 +166,7 @@ if generar:
             draw.text((x, y), linea, font=fuente, fill="black")
             y += fuente.size + 10
 
-        st.image(imagen_final, caption="Código QR generado", use_column_width=False)
+        st.image(imagen_final, caption="Código QR generado", width="content")
 
         nombre_base = nombre_clinica.replace(" ", "_").replace("/", "-")
         nombre_archivo = f"QR_{nombre_base}.png"
