@@ -116,6 +116,15 @@ if not user:
 
 # Revalida expiración de sesión y actualiza actividad.
 user = require_auth()
+
+# Puente de compatibilidad v2.1: algunas páginas v1 desplegadas previamente
+# consultaban estas claves. Mantenerlas durante la transición evita falsos
+# mensajes de "Debe iniciar sesión" al navegar desde una sesión v2 válida.
+st.session_state.logueado = True
+st.session_state.verificado = True
+st.session_state.usuario = str(user.get("username", ""))
+st.session_state.pais_usuario = str(user.get("pais", ""))
+
 render_sidebar(user)
 
 with st.sidebar:

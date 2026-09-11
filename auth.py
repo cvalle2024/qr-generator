@@ -182,6 +182,14 @@ def _clear_attempts(username: str) -> None:
         store["locked_until"].pop(username, None)
 
 
+def _sync_legacy_session(user: dict) -> None:
+    """Mantiene compatibilidad temporal con páginas v1 que aún consultan logueado/verificado."""
+    st.session_state.logueado = True
+    st.session_state.verificado = True
+    st.session_state.usuario = str(user.get("username", ""))
+    st.session_state.pais_usuario = str(user.get("pais", ""))
+
+
 def authenticate(username: str, password: str) -> tuple[bool, str]:
     settings = get_security_settings()
     normalized = _normalize_username(username)
@@ -216,8 +224,7 @@ def authenticate(username: str, password: str) -> tuple[bool, str]:
         "pais": str(user.get("pais", "")),
         "role": str(user.get("role", "user")),
     }
-    st.session_state.pais_usuario = str(user.get("pais", ""))
-    st.session_state.usuario = user["username"]
+    _sync_legacy_session(st.session_state.auth_user)
     st.session_state.last_activity = time.time()
     logger.info("Inicio de sesión correcto para usuario=%s", normalized)
     return True, "Acceso autorizado."
@@ -257,8 +264,7 @@ def current_user() -> dict | None:
         if oidc_user:
             st.session_state.authenticated = True
             st.session_state.auth_user = oidc_user
-            st.session_state.pais_usuario = oidc_user.get("pais", "")
-            st.session_state.usuario = oidc_user.get("username", "")
+            _sync_legacy_session(oidc_user)
             st.session_state.setdefault("last_activity", time.time())
             return oidc_user
         if settings.auth_mode == "oidc":
@@ -267,7 +273,10 @@ def current_user() -> dict | None:
     if not st.session_state.get("authenticated", False):
         return None
     user = st.session_state.get("auth_user")
-    return dict(user) if isinstance(user, dict) else None
+    if isinstance(user, dict):
+        _sync_legacy_session(user)
+        return dict(user)
+    return None
 
 
 def logout() -> None:

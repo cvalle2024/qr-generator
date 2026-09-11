@@ -1,0 +1,15 @@
+PARCHE V2.1 - COMPATIBILIDAD DE SESIÓN
+
+Problema corregido:
+El Home v2 autentica con `authenticated/auth_user`, mientras una página antigua de QR puede seguir consultando `logueado`.
+El parche sincroniza ambas sesiones durante la transición.
+
+Reemplace SOLO estos dos archivos en la RAÍZ del repositorio:
+- Home.py
+- auth.py
+
+No modifique Secrets.
+Después del commit, en Streamlit Cloud use Manage app > Reboot app y vuelva a iniciar sesión.
+
+Comprobación rápida:
+Tras iniciar sesión y pulsar "Abrir generador QR", la página antigua ya no debe mostrar "Debe iniciar sesión para acceder".
