@@ -1,6 +1,6 @@
 import streamlit as st
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # === CONFIGURACIÓN ===
 st.set_page_config(page_title="🗃️Centro ERSI", layout="centered")
@@ -86,7 +86,7 @@ USUARIOS_VALIDOS = {
 }
 if "descargado" not in st.session_state:
     st.session_state.descargado= False
-if "registro" in st.session_state and st.session_state["registro"]:
+if st.session_state.get("registro") and not st.session_state.get("descargado", False):
     st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión si ha generado códigos.")
 
     
