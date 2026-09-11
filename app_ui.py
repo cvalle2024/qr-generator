@@ -8,7 +8,7 @@ import streamlit as st
 
 ROOT_DIR = Path(__file__).resolve().parent
 LOGO_PATH = ROOT_DIR / "logo_vihca.png"
-APP_VERSION = "v2.0.0"
+APP_VERSION = "v2.2.0"
 
 
 def inject_global_styles() -> None:
@@ -17,192 +17,272 @@ def inject_global_styles() -> None:
         <style>
         :root {
             --vihca-navy: #071521;
-            --vihca-panel: rgba(255,255,255,.88);
-            --vihca-border: rgba(15, 23, 42, .10);
+            --vihca-navy-2: #0b2433;
+            --vihca-panel: rgba(255,255,255,.94);
+            --vihca-border: rgba(15, 23, 42, .11);
             --vihca-text: #0f172a;
-            --vihca-muted: #64748b;
+            --vihca-muted: #526277;
             --vihca-cyan: #0f9fb4;
             --vihca-blue: #1769aa;
             --vihca-success: #0f8a67;
+            --vihca-warning: #8a5a00;
+            --vihca-danger: #b42318;
         }
+
+        html, body, [class*="css"] { font-family: Inter, "Segoe UI", Arial, sans-serif; }
 
         .stApp {
             background:
-              radial-gradient(circle at 8% 5%, rgba(15,159,180,.14), transparent 26rem),
-              radial-gradient(circle at 95% 0%, rgba(23,105,170,.12), transparent 25rem),
-              linear-gradient(180deg, #f8fbfd 0%, #eef5f8 100%);
-            color: var(--vihca-text);
+              radial-gradient(circle at 7% 3%, rgba(15,159,180,.13), transparent 28rem),
+              radial-gradient(circle at 96% 0%, rgba(23,105,170,.11), transparent 28rem),
+              linear-gradient(180deg, #f8fbfd 0%, #edf5f8 100%);
+            color: var(--vihca-text) !important;
         }
 
         .block-container {
-            max-width: 1120px;
-            padding-top: 2.2rem;
+            max-width: 1160px;
+            padding-top: 2rem;
             padding-bottom: 6rem !important;
+        }
+
+        /* Fuerza contraste en el contenido principal aun si el navegador/tema estaba en modo oscuro. */
+        [data-testid="stMainBlockContainer"] h1,
+        [data-testid="stMainBlockContainer"] h2,
+        [data-testid="stMainBlockContainer"] h3,
+        [data-testid="stMainBlockContainer"] h4,
+        [data-testid="stMainBlockContainer"] h5,
+        [data-testid="stMainBlockContainer"] h6,
+        [data-testid="stMainBlockContainer"] p,
+        [data-testid="stMainBlockContainer"] label,
+        [data-testid="stMainBlockContainer"] li,
+        [data-testid="stMainBlockContainer"] span {
+            color: var(--vihca-text);
         }
 
         [data-testid="stSidebar"] {
             background: linear-gradient(180deg, #071521 0%, #0b2233 100%);
             border-right: 1px solid rgba(255,255,255,.06);
         }
-        [data-testid="stSidebar"] * { color: #e7f2f6; }
+        [data-testid="stSidebar"] * { color: #e7f2f6 !important; }
         [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,.12); }
+        [data-testid="stSidebarNav"] { display:none; }
 
         .vh-hero {
             position: relative;
             overflow: hidden;
-            padding: 26px 28px;
-            border: 1px solid rgba(15, 159, 180, .18);
-            border-radius: 24px;
-            background: linear-gradient(135deg, rgba(7,21,33,.98), rgba(9,57,75,.94));
-            box-shadow: 0 22px 55px rgba(7, 21, 33, .16);
-            margin-bottom: 22px;
+            padding: 30px 32px;
+            border: 1px solid rgba(15, 159, 180, .20);
+            border-radius: 26px;
+            background: linear-gradient(135deg, rgba(7,21,33,.99), rgba(8,62,78,.96));
+            box-shadow: 0 24px 60px rgba(7, 21, 33, .17);
+            margin-bottom: 24px;
+        }
+        .vh-hero:before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(110deg, transparent 45%, rgba(255,255,255,.035) 46%, transparent 70%);
+            pointer-events: none;
         }
         .vh-hero:after {
             content: "";
             position: absolute;
-            width: 240px;
-            height: 240px;
+            width: 270px;
+            height: 270px;
             border-radius: 50%;
-            top: -120px;
-            right: -60px;
-            background: radial-gradient(circle, rgba(35,211,230,.32), rgba(35,211,230,0));
+            top: -135px;
+            right: -55px;
+            background: radial-gradient(circle, rgba(35,211,230,.36), rgba(35,211,230,0));
             pointer-events: none;
         }
         .vh-kicker {
-            color: #71dbe8;
+            color: #83e6ef !important;
             font-size: 12px;
-            letter-spacing: .16em;
-            font-weight: 800;
+            letter-spacing: .17em;
+            font-weight: 850;
             text-transform: uppercase;
-            margin-bottom: 7px;
+            margin-bottom: 10px;
         }
         .vh-hero h1 {
-            color: #ffffff;
-            font-size: clamp(1.65rem, 3vw, 2.45rem);
+            color: #ffffff !important;
+            font-size: clamp(1.7rem, 3vw, 2.55rem);
             line-height: 1.08;
-            margin: 0 0 10px 0;
+            margin: 0 0 12px 0;
             letter-spacing: -.03em;
         }
         .vh-hero p {
-            color: #bed3db;
+            color: #d0e0e6 !important;
             font-size: 15px;
-            max-width: 760px;
+            max-width: 820px;
             margin: 0;
-            line-height: 1.6;
+            line-height: 1.65;
         }
 
         .vh-section-title {
-            font-size: 1.05rem;
-            font-weight: 800;
-            color: #0f172a;
-            margin: .3rem 0 .15rem 0;
+            font-size: 1.08rem;
+            font-weight: 850;
+            color: #0f172a !important;
+            margin: .45rem 0 .18rem 0;
         }
         .vh-section-subtitle {
-            font-size: .88rem;
-            color: #64748b;
-            margin-bottom: .8rem;
+            font-size: .9rem;
+            color: #526277 !important;
+            margin-bottom: .9rem;
         }
 
         .vh-stat-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0,1fr));
             gap: 12px;
-            margin: 12px 0 20px 0;
+            margin: 12px 0 22px 0;
         }
         .vh-stat {
-            padding: 14px 16px;
+            padding: 15px 17px;
             border: 1px solid var(--vihca-border);
-            border-radius: 16px;
-            background: rgba(255,255,255,.78);
-            box-shadow: 0 8px 24px rgba(15,23,42,.04);
+            border-radius: 17px;
+            background: rgba(255,255,255,.94);
+            box-shadow: 0 9px 25px rgba(15,23,42,.045);
         }
-        .vh-stat-label { color:#64748b; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
-        .vh-stat-value { color:#0f172a; font-size:17px; font-weight:800; margin-top:4px; }
+        .vh-stat-label { color:#526277 !important; font-size:11px; font-weight:850; text-transform:uppercase; letter-spacing:.08em; }
+        .vh-stat-value { color:#0f172a !important; font-size:18px; font-weight:850; margin-top:4px; word-break:break-word; }
 
         .vh-card {
             border: 1px solid var(--vihca-border);
-            background: rgba(255,255,255,.86);
+            background: rgba(255,255,255,.94);
             border-radius: 20px;
-            padding: 18px;
-            box-shadow: 0 14px 36px rgba(15,23,42,.055);
+            padding: 20px;
+            box-shadow: 0 14px 38px rgba(15,23,42,.055);
         }
-        .vh-card-title { font-size: 1rem; font-weight: 850; color:#0f172a; margin:0 0 6px; }
-        .vh-card-copy { font-size:.88rem; line-height:1.55; color:#64748b; margin:0; }
+        .vh-card-title { font-size: 1rem; font-weight: 850; color:#0f172a !important; margin:0 0 6px; }
+        .vh-card-copy { font-size:.89rem; line-height:1.58; color:#526277 !important; margin:0; }
 
         .vh-security-note {
             display:flex;
             gap:10px;
             align-items:flex-start;
-            border:1px solid rgba(15,138,103,.18);
-            background:rgba(15,138,103,.07);
-            border-radius:14px;
-            padding:12px 14px;
-            color:#145a47;
-            font-size:.84rem;
-            margin:10px 0 16px 0;
+            border:1px solid rgba(15,138,103,.20);
+            background:rgba(15,138,103,.075);
+            border-radius:15px;
+            padding:13px 15px;
+            color:#145a47 !important;
+            font-size:.86rem;
+            margin:10px 0 17px 0;
         }
+        .vh-security-note span { color:#145a47 !important; }
+
+        .vh-notice {
+            display:flex;
+            align-items:flex-start;
+            gap:11px;
+            border-radius:16px;
+            padding:14px 16px;
+            margin:10px 0 18px 0;
+            font-size:.9rem;
+            font-weight:650;
+            line-height:1.5;
+        }
+        .vh-notice span { color:inherit !important; }
+        .vh-notice-warning { background:#fff8dd; border:1px solid #ead18a; color:#674900 !important; }
+        .vh-notice-info { background:#eaf5ff; border:1px solid #b8d9f4; color:#174b72 !important; }
+        .vh-notice-success { background:#e9f8f2; border:1px solid #a9dfcb; color:#145a47 !important; }
+        .vh-notice-danger { background:#fff0ef; border:1px solid #f1b9b4; color:#8e1b12 !important; }
 
         .vh-code-card {
             text-align:center;
-            padding:20px;
-            border-radius:18px;
-            border:1px solid rgba(15,159,180,.20);
-            background:linear-gradient(135deg, rgba(15,159,180,.08), rgba(23,105,170,.07));
+            padding:21px;
+            border-radius:19px;
+            border:1px solid rgba(15,159,180,.22);
+            background:linear-gradient(135deg, rgba(15,159,180,.09), rgba(23,105,170,.075));
             margin:12px 0 16px 0;
         }
-        .vh-code-label {font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:#64748b;font-weight:800;}
-        .vh-code-value {font-size:clamp(1rem,3vw,1.35rem);font-weight:900;letter-spacing:.04em;color:#083344;margin-top:6px;word-break:break-all;}
+        .vh-code-label {font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:#526277 !important;font-weight:850;}
+        .vh-code-value {font-size:clamp(1rem,3vw,1.38rem);font-weight:900;letter-spacing:.04em;color:#083344 !important;margin-top:6px;word-break:break-all;}
 
+        /* Contenedores nativos */
+        [data-testid="stVerticalBlockBorderWrapper"] > div {
+            border-color: rgba(15,23,42,.11) !important;
+        }
+        [data-testid="stForm"] {
+            border: 1px solid var(--vihca-border);
+            border-radius: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,.91);
+            box-shadow: 0 12px 32px rgba(15,23,42,.045);
+        }
+
+        /* Inputs: no depender del tema oscuro del usuario */
+        [data-testid="stTextInput"] input,
+        [data-testid="stNumberInput"] input,
+        [data-testid="stTextArea"] textarea {
+            background:#ffffff !important;
+            color:#0f172a !important;
+            border-radius:11px !important;
+        }
+        [data-baseweb="select"] > div {
+            background:#ffffff !important;
+            color:#0f172a !important;
+            border-radius:11px !important;
+        }
+        [data-baseweb="select"] span { color:#0f172a !important; }
+
+        /* Botones primarios y secundarios con texto siempre visible */
         .stButton > button, .stFormSubmitButton > button, .stDownloadButton > button {
-            border-radius: 12px !important;
-            min-height: 43px;
-            font-weight: 750 !important;
-            border: 1px solid rgba(15, 159, 180, .22) !important;
+            border-radius: 13px !important;
+            min-height: 44px;
+            font-weight: 780 !important;
             transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
         }
+        .stButton > button[kind="secondary"],
+        .stDownloadButton > button[kind="secondary"],
+        .stFormSubmitButton > button[kind="secondary"] {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid rgba(15, 159, 180, .32) !important;
+        }
+        .stButton > button[kind="secondary"] p,
+        .stDownloadButton > button[kind="secondary"] p,
+        .stFormSubmitButton > button[kind="secondary"] p { color:#0f172a !important; }
         .stButton > button:hover, .stFormSubmitButton > button:hover, .stDownloadButton > button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 8px 24px rgba(15, 159, 180, .12);
-            border-color: rgba(15,159,180,.55) !important;
+            box-shadow: 0 8px 24px rgba(15, 159, 180, .13);
+            border-color: rgba(15,159,180,.62) !important;
         }
         button[kind="primary"] {
             background: linear-gradient(135deg, #0f9fb4, #1769aa) !important;
             color: white !important;
             border: none !important;
         }
+        button[kind="primary"] p, button[kind="primary"] span { color:white !important; }
 
-        [data-testid="stTextInput"] input,
-        [data-testid="stSelectbox"] > div > div {
-            border-radius: 11px !important;
+        /* Alerts de Streamlit con contraste legible */
+        [data-testid="stAlert"] { border-radius:15px !important; }
+        [data-testid="stAlert"] p, [data-testid="stAlert"] div, [data-testid="stAlert"] span {
+            color:#0f172a !important;
         }
 
-        [data-testid="stForm"] {
-            border: 1px solid var(--vihca-border);
-            border-radius: 20px;
-            padding: 20px;
-            background: rgba(255,255,255,.80);
-            box-shadow: 0 12px 30px rgba(15,23,42,.04);
-        }
+        /* Dataframes y pestañas */
+        [data-testid="stDataFrame"] { border-radius:16px; overflow:hidden; }
+        button[data-baseweb="tab"] p { color:#334155 !important; font-weight:750 !important; }
 
         .vh-footer {
             position: fixed;
             left: 0;
             bottom: 0;
             width: 100%;
-            background: rgba(248,251,253,.88);
+            background: rgba(248,251,253,.92);
             border-top: 1px solid rgba(15,23,42,.08);
             padding: 8px 18px;
             text-align: center;
             font-size: 11px;
-            color: #64748b;
+            color: #526277 !important;
             z-index: 999;
             backdrop-filter: blur(12px);
         }
-        .vh-footer b { color:#0f172a; }
+        .vh-footer b { color:#0f172a !important; }
 
         @media (max-width: 700px) {
-            .block-container { padding-top: 1.2rem; }
-            .vh-hero { padding: 21px 19px; border-radius: 20px; }
+            .block-container { padding-top: 1.15rem; }
+            .vh-hero { padding: 22px 20px; border-radius: 21px; }
             .vh-stat-grid { grid-template-columns: 1fr; }
             .vh-footer { font-size: 10px; }
         }
@@ -255,6 +335,16 @@ def security_note(text: str) -> None:
     )
 
 
+def notice(text: str, tone: str = "info", icon: str | None = None) -> None:
+    tone = tone if tone in {"info", "warning", "success", "danger"} else "info"
+    default_icons = {"info": "ℹ️", "warning": "⚠️", "success": "✓", "danger": "⛔"}
+    st.markdown(
+        f'<div class="vh-notice vh-notice-{tone}"><span>{escape(icon or default_icons[tone])}</span>'
+        f'<span>{escape(text)}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_brand() -> None:
     if LOGO_PATH.exists():
         st.image(str(LOGO_PATH), width=230)
@@ -269,6 +359,9 @@ def render_sidebar(user: dict | None = None) -> None:
         if user:
             st.markdown(f"**{escape(user.get('display_name') or user.get('username', 'Usuario'))}**")
             st.caption(f"🌎 {user.get('pais', 'Sin país asignado')}")
+            role = str(user.get("role", "user")).strip().lower()
+            role_label = {"admin": "Administrador", "coordinator": "Coordinador", "user": "Usuario"}.get(role, role.title())
+            st.caption(f"👤 {role_label}")
             st.caption("🔒 Sesión protegida")
 
 

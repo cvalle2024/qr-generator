@@ -2,16 +2,28 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app_ui import APP_VERSION, footer, hero, inject_global_styles, render_brand, render_sidebar, security_note
+from app_ui import (
+    APP_VERSION,
+    footer,
+    hero,
+    inject_global_styles,
+    notice,
+    render_brand,
+    render_sidebar,
+    security_note,
+    stats,
+)
 from auth import (
     auth_is_configured,
     authenticate,
+    change_own_password,
     current_user,
     get_security_settings,
     local_auth_is_configured,
     logout,
     oidc_auth_is_configured,
     require_auth,
+    validate_password_strength,
 )
 
 st.set_page_config(
@@ -26,7 +38,10 @@ inject_global_styles()
 
 def cerrar_sesion() -> None:
     if st.session_state.get("registro") and not st.session_state.get("descargado", False):
-        st.error("Primero descargue la tabla de códigos generados en esta sesión antes de cerrar sesión.")
+        notice(
+            "Antes de cerrar sesión, descargue la tabla con los códigos generados durante esta sesión.",
+            "warning",
+        )
         return
     logout()
     st.rerun()
@@ -42,22 +57,21 @@ if not user:
         render_brand()
 
     hero(
-        "Proyecto VIHCA · Plataforma segura",
-        "Identificación ERSI y generación de códigos QR",
-        "Acceso controlado para crear identificadores únicos de voluntarios y materiales QR de referencia de forma consistente y trazable.",
+        "Proyecto VIHCA · Acceso protegido",
+        "Plataforma ERSI y generación de códigos QR",
+        "Gestione identificadores ERSI y materiales QR desde un entorno controlado, trazable y preparado para trabajo regional.",
     )
 
     if not auth_is_configured():
-        st.error("La autenticación segura todavía no está configurada.")
-        st.info(
-            "Configure la autenticación en Streamlit Secrets antes de habilitar el acceso. "
-            "El proyecto incluye .streamlit/secrets.example.toml y la guía SEGURIDAD_Y_DESPLIEGUE.md."
+        notice("La autenticación segura todavía no está configurada.", "danger")
+        notice(
+            "Configure los usuarios en Streamlit Secrets. Después podrá migrarlos al panel de administración sin guardar contraseñas en el código.",
+            "info",
         )
-        security_note("La versión 2.0 ya no acepta contraseñas escritas directamente dentro de Home.py.")
+        security_note("Las contraseñas nunca deben escribirse directamente dentro de Home.py ni subirse al repositorio.")
         footer("Plataforma ERSI")
         st.stop()
 
-    # Si existe una sesión OIDC pero el correo no está autorizado, no se revela información adicional.
     oidc_browser_logged_in = False
     try:
         oidc_browser_logged_in = bool(st.user.is_logged_in)
@@ -65,7 +79,7 @@ if not user:
         pass
 
     if oidc_browser_logged_in and settings.auth_mode in {"oidc", "both"}:
-        st.error("La cuenta autenticada no está autorizada para utilizar esta aplicación.")
+        notice("La cuenta autenticada no está autorizada para utilizar esta aplicación.", "danger")
         if st.button("Cerrar cuenta autenticada", width="stretch"):
             try:
                 st.logout()
@@ -78,22 +92,25 @@ if not user:
     if settings.auth_mode in {"oidc", "both"} and oidc_auth_is_configured():
         with st.container(border=True):
             st.markdown("### Acceso institucional")
-            st.caption("Use su cuenta institucional configurada por el administrador.")
-            if st.button("Continuar con inicio de sesión institucional", type="primary", width="stretch"):
+            st.caption("Utilice la cuenta institucional autorizada por el administrador.")
+            if st.button("Continuar con cuenta institucional", type="primary", width="stretch"):
                 st.login()
         if settings.auth_mode == "both":
-            st.markdown("<div style='text-align:center;color:#64748b;margin:8px 0'>o use credenciales locales autorizadas</div>", unsafe_allow_html=True)
+            st.markdown(
+                "<div style='text-align:center;color:#526277;margin:10px 0'>o ingrese con credenciales locales autorizadas</div>",
+                unsafe_allow_html=True,
+            )
 
     if settings.auth_mode in {"local", "both"} and local_auth_is_configured():
-        left, center, right = st.columns([1, 1.7, 1])
+        left, center, right = st.columns([1, 1.75, 1])
         with center:
             with st.container(border=True):
-                st.markdown("### Acceso con credenciales")
-                st.caption("Ingrese con las credenciales autorizadas por VIHCA.")
+                st.markdown("### Inicio de sesión")
+                st.caption("Ingrese sus credenciales autorizadas por Proyecto VIHCA.")
                 with st.form("login_form", clear_on_submit=False):
                     username = st.text_input("Usuario", placeholder="Ingrese su usuario")
                     password = st.text_input("Contraseña", type="password", placeholder="••••••••••••")
-                    submitted = st.form_submit_button("Ingresar de forma segura", type="primary", width="stretch")
+                    submitted = st.form_submit_button("Ingresar", type="primary", width="stretch")
 
                 if submitted:
                     ok, message = authenticate(username, password)
@@ -104,65 +121,105 @@ if not user:
                         st.error(message)
 
                 st.caption(
-                    f"Protección activa: bloqueo tras intentos fallidos · sesión expira tras "
+                    f"Protección activa: bloqueo por intentos fallidos · sesión expira tras "
                     f"{settings.session_timeout_minutes} min de inactividad."
                 )
 
     security_note(
-        "Las credenciales locales se validan con hash PBKDF2 y se almacenan en Streamlit Secrets. También puede usar autenticación institucional OIDC con Google, Microsoft, Okta u otro proveedor compatible."
+        "Las contraseñas locales se validan mediante PBKDF2-SHA256. El sistema también está preparado para autenticación institucional OIDC."
     )
     footer("Plataforma ERSI")
     st.stop()
 
-# Revalida expiración de sesión y actualiza actividad.
 user = require_auth()
-
-# Puente de compatibilidad v2.1: algunas páginas v1 desplegadas previamente
-# consultaban estas claves. Mantenerlas durante la transición evita falsos
-# mensajes de "Debe iniciar sesión" al navegar desde una sesión v2 válida.
-st.session_state.logueado = True
-st.session_state.verificado = True
-st.session_state.usuario = str(user.get("username", ""))
-st.session_state.pais_usuario = str(user.get("pais", ""))
-
 render_sidebar(user)
 
 with st.sidebar:
     st.divider()
+    if str(user.get("role", "user")).lower() == "admin":
+        if st.button("⚙️ Administrar usuarios", width="stretch"):
+            st.switch_page("pages/3_Administracion_Usuarios.py")
     if st.button("Cerrar sesión", width="stretch"):
         cerrar_sesion()
+
+# Un usuario creado desde el panel puede recibir una contraseña temporal.
+if user.get("must_change_password") and user.get("source") == "managed":
+    hero(
+        "Seguridad de la cuenta",
+        "Cambie su contraseña temporal",
+        "Antes de continuar, establezca una contraseña personal. La contraseña temporal dejará de ser válida inmediatamente.",
+    )
+    with st.form("force_password_change"):
+        new_password = st.text_input("Nueva contraseña", type="password")
+        confirm_password = st.text_input("Confirmar nueva contraseña", type="password")
+        save_password = st.form_submit_button("Guardar nueva contraseña", type="primary", width="stretch")
+    if save_password:
+        valid, message = validate_password_strength(new_password)
+        if not valid:
+            st.error(message)
+        elif new_password != confirm_password:
+            st.error("Las contraseñas no coinciden.")
+        else:
+            ok, message = change_own_password(user["username"], new_password)
+            if ok:
+                st.success("Contraseña actualizada. Ya puede utilizar la plataforma.")
+                st.rerun()
+            else:
+                st.error(message)
+    security_note("Use una contraseña de al menos 12 caracteres con mayúscula, minúscula, número y símbolo.")
+    footer("Plataforma ERSI")
+    st.stop()
 
 hero(
     "Centro operativo ERSI",
     f"Bienvenido, {user.get('display_name') or user.get('username')}",
-    "Seleccione el flujo de trabajo que necesita. La sesión conserva el último código ERSI para agilizar la creación del QR.",
+    "Seleccione el módulo que necesita. El último código ERSI generado permanece disponible durante la sesión para agilizar la creación del QR.",
 )
 
 if st.session_state.get("registro") and not st.session_state.get("descargado", False):
-    st.warning("Tiene códigos generados sin descargar. Descargue la tabla de la sesión antes de cerrar.")
+    notice(
+        "Tiene códigos generados pendientes de descarga. Guarde la tabla de la sesión antes de cerrar.",
+        "warning",
+    )
 
 col1, col2 = st.columns(2, gap="large")
 with col1:
     with st.container(border=True):
-        st.markdown("### 🧬 Código ERSI")
-        st.write("Genere un identificador único, registre el centro de salud y guarde el evento en Google Sheets.")
-        st.caption("Incluye validación de país, sitio, datos mínimos y trazabilidad del usuario que registra.")
+        st.markdown("### 🧬 Generador ERSI")
+        st.write("Cree el identificador único del voluntario y registre el evento en la hoja central.")
+        st.caption("Incluye validación de país, servicio de salud, datos mínimos y trazabilidad del usuario que registra.")
         if st.button("Abrir generador ERSI", type="primary", width="stretch"):
             st.switch_page("pages/1_Generador_Codigo_ERSI.py")
 
 with col2:
     with st.container(border=True):
-        st.markdown("### ▦ Código QR")
-        st.write("Transforme el código ERSI en una pieza QR lista para entregar o compartir con el voluntario.")
-        st.caption("Incluye clínica, contacto TBAC y diseño de salida listo para PNG.")
-        if st.button("Abrir generador QR", width="stretch"):
+        st.markdown("### ▦ Generador QR")
+        st.write("Convierta el código ERSI en una tarjeta QR lista para entregar, imprimir o compartir.")
+        st.caption("Incluye clínica, contacto TBAC, prefijo del país y archivo PNG de alta legibilidad.")
+        if st.button("Abrir generador QR", type="primary", width="stretch"):
             st.switch_page("pages/2_Generador_Codigo_QR.py")
 
-st.markdown("#### Estado de la sesión")
-a, b, c = st.columns(3)
-a.metric("País asignado", user.get("pais", "—"))
-b.metric("Códigos en sesión", len(st.session_state.get("registro", [])))
-c.metric("Versión", APP_VERSION)
+if str(user.get("role", "user")).lower() == "admin":
+    st.write("")
+    with st.container(border=True):
+        c_text, c_action = st.columns([2.4, 1])
+        with c_text:
+            st.markdown("### ⚙️ Administración del sistema")
+            st.write("Cree y administre usuarios, asigne país y rol, restablezca contraseñas y consulte la bitácora de actividad.")
+            st.caption("Disponible únicamente para cuentas con rol Administrador.")
+        with c_action:
+            st.write("")
+            if st.button("Abrir administración", type="primary", width="stretch"):
+                st.switch_page("pages/3_Administracion_Usuarios.py")
 
-security_note("No comparta credenciales ni deje la sesión abierta en equipos de uso compartido. Use siempre Cerrar sesión al finalizar.")
+st.markdown("#### Estado de la sesión")
+stats(
+    [
+        ("País asignado", user.get("pais", "—")),
+        ("Códigos en sesión", str(len(st.session_state.get("registro", [])))),
+        ("Versión", APP_VERSION),
+    ]
+)
+
+security_note("No comparta credenciales ni deje la sesión abierta en equipos de uso compartido. Cierre sesión al finalizar.")
 footer("Plataforma ERSI")

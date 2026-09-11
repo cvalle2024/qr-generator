@@ -5,12 +5,18 @@ import binascii
 import hashlib
 import hmac
 import logging
+import re
+import secrets as pysecrets
+import string
 import threading
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from datetime import datetime
 
+import gspread
 import streamlit as st
+from google.oauth2.service_account import Credentials
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +25,23 @@ DEFAULT_MAX_ATTEMPTS = 5
 DEFAULT_WINDOW_MINUTES = 15
 DEFAULT_LOCKOUT_MINUTES = 10
 DEFAULT_SESSION_TIMEOUT_MINUTES = 30
+
+MANAGED_USERS_SHEET = "USUARIOS_SISTEMA"
+AUDIT_SHEET = "AUDITORIA_SISTEMA"
+MANAGED_USER_HEADERS = [
+    "username",
+    "display_name",
+    "password_hash",
+    "pais",
+    "role",
+    "enabled",
+    "must_change_password",
+    "created_at",
+    "created_by",
+    "updated_at",
+    "last_login",
+]
+AUDIT_HEADERS = ["timestamp", "username", "pais", "accion", "modulo", "detalle"]
 
 
 @dataclass(frozen=True)
@@ -37,6 +60,25 @@ def _attempt_store():
         "attempts": defaultdict(deque),
         "locked_until": {},
     }
+
+
+@st.cache_resource
+def _google_spreadsheet():
+    scope = ["https://www.googleapis.com/auth/spreadsheets"]
+    creds = Credentials.from_service_account_info(
+        dict(st.secrets["google_service_account"]),
+        scopes=scope,
+    )
+    client = gspread.authorize(creds)
+    # Se permite separar la administración de usuarios en otro spreadsheet si se desea.
+    try:
+        user_mgmt = st.secrets.get("user_management", {})
+        sheet_id = str(user_mgmt.get("spreadsheet_id", "")).strip()
+    except Exception:
+        sheet_id = ""
+    if not sheet_id:
+        sheet_id = str(st.secrets["google_sheets"]["spreadsheet_id"]).strip()
+    return client.open_by_key(sheet_id)
 
 
 def _secret_section(name: str):
@@ -77,9 +119,7 @@ def _users_section():
 
 
 def hash_password(password: str, *, iterations: int = DEFAULT_ITERATIONS) -> str:
-    import secrets
-
-    salt = secrets.token_bytes(16)
+    salt = pysecrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
     return "pbkdf2_sha256${}${}${}".format(
         iterations,
@@ -104,11 +144,51 @@ def verify_password(password: str, stored_hash: str) -> bool:
         return False
 
 
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    if len(password) < 12:
+        return False, "La contraseña debe tener al menos 12 caracteres."
+    if not re.search(r"[A-Z]", password):
+        return False, "Incluya al menos una letra mayúscula."
+    if not re.search(r"[a-z]", password):
+        return False, "Incluya al menos una letra minúscula."
+    if not re.search(r"\d", password):
+        return False, "Incluya al menos un número."
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return False, "Incluya al menos un símbolo."
+    return True, "Contraseña válida."
+
+
+def generate_secure_password(length: int = 16) -> str:
+    length = max(14, min(int(length), 32))
+    symbols = "!@#$%*-_+"
+    required = [
+        pysecrets.choice(string.ascii_uppercase),
+        pysecrets.choice(string.ascii_lowercase),
+        pysecrets.choice(string.digits),
+        pysecrets.choice(symbols),
+    ]
+    pool = string.ascii_letters + string.digits + symbols
+    chars = required + [pysecrets.choice(pool) for _ in range(length - len(required))]
+    pysecrets.SystemRandom().shuffle(chars)
+    return "".join(chars)
+
+
 def _normalize_username(username: str) -> str:
-    return username.strip().lower()
+    return str(username or "").strip().lower()
 
 
-def _get_user(username: str) -> dict | None:
+def _normalize_bool(value, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "si", "sí", "activo"}:
+        return True
+    if text in {"false", "0", "no", "inactivo"}:
+        return False
+    return default
+
+
+def _secret_user(username: str) -> dict | None:
     target = _normalize_username(username)
     for key, raw in _users_section().items():
         if _normalize_username(str(key)) != target:
@@ -118,12 +198,335 @@ def _get_user(username: str) -> dict | None:
         data.setdefault("display_name", str(key))
         data.setdefault("pais", "")
         data.setdefault("enabled", True)
+        data.setdefault("role", "user")
+        data["source"] = "secrets"
+        data["must_change_password"] = False
         return data
     return None
 
 
+def _worksheet(title: str, create: bool = False, headers: list[str] | None = None):
+    try:
+        book = _google_spreadsheet()
+        try:
+            ws = book.worksheet(title)
+        except gspread.WorksheetNotFound:
+            if not create:
+                return None
+            ws = book.add_worksheet(title=title, rows=500, cols=max(12, len(headers or [])))
+            if headers:
+                ws.append_row(headers, value_input_option="RAW")
+            return ws
+
+        if headers:
+            values = ws.row_values(1)
+            if not values:
+                ws.append_row(headers, value_input_option="RAW")
+            elif [str(v).strip() for v in values[: len(headers)]] != headers:
+                # No sobrescribe estructuras desconocidas. Fuerza una falla legible para no corromper datos.
+                raise ValueError(f"La hoja {title} existe pero no tiene la estructura esperada.")
+        return ws
+    except Exception:
+        logger.exception("No fue posible abrir la hoja de gestión %s", title)
+        if create:
+            raise
+        return None
+
+
+def ensure_management_store() -> tuple[bool, str]:
+    try:
+        _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
+        _worksheet(AUDIT_SHEET, create=True, headers=AUDIT_HEADERS)
+        return True, "Las hojas de administración están listas."
+    except Exception:
+        return False, "No fue posible preparar las hojas de administración. Revise permisos del Service Account."
+
+
+def _rows_as_dicts(ws, headers: list[str]) -> list[dict]:
+    values = ws.get_all_values()
+    if not values:
+        return []
+    actual_headers = [str(v).strip() for v in values[0]]
+    if actual_headers[: len(headers)] != headers:
+        raise ValueError("La hoja no tiene la estructura esperada.")
+    rows: list[dict] = []
+    for idx, raw in enumerate(values[1:], start=2):
+        padded = list(raw) + [""] * max(0, len(headers) - len(raw))
+        record = {headers[i]: padded[i] for i in range(len(headers))}
+        record["_row_index"] = idx
+        rows.append(record)
+    return rows
+
+
+def _managed_user(username: str) -> dict | None:
+    target = _normalize_username(username)
+    if not target:
+        return None
+    ws = _worksheet(MANAGED_USERS_SHEET, create=False, headers=MANAGED_USER_HEADERS)
+    if ws is None:
+        return None
+    try:
+        for row in _rows_as_dicts(ws, MANAGED_USER_HEADERS):
+            if _normalize_username(row.get("username", "")) != target:
+                continue
+            return {
+                **row,
+                "username": str(row.get("username", "")).strip(),
+                "display_name": str(row.get("display_name", "")).strip() or target,
+                "pais": str(row.get("pais", "")).strip(),
+                "role": str(row.get("role", "user")).strip().lower() or "user",
+                "enabled": _normalize_bool(row.get("enabled"), True),
+                "must_change_password": _normalize_bool(row.get("must_change_password"), False),
+                "source": "managed",
+            }
+    except Exception:
+        logger.exception("No fue posible consultar usuarios administrados")
+    return None
+
+
+def list_managed_users() -> list[dict]:
+    ws = _worksheet(MANAGED_USERS_SHEET, create=False, headers=MANAGED_USER_HEADERS)
+    if ws is None:
+        return []
+    rows = _rows_as_dicts(ws, MANAGED_USER_HEADERS)
+    result = []
+    for row in rows:
+        username = str(row.get("username", "")).strip()
+        if not username:
+            continue
+        result.append(
+            {
+                "username": username,
+                "display_name": str(row.get("display_name", "")).strip(),
+                "pais": str(row.get("pais", "")).strip(),
+                "role": str(row.get("role", "user")).strip().lower() or "user",
+                "enabled": _normalize_bool(row.get("enabled"), True),
+                "must_change_password": _normalize_bool(row.get("must_change_password"), False),
+                "created_at": str(row.get("created_at", "")).strip(),
+                "created_by": str(row.get("created_by", "")).strip(),
+                "updated_at": str(row.get("updated_at", "")).strip(),
+                "last_login": str(row.get("last_login", "")).strip(),
+                "source": "managed",
+            }
+        )
+    return sorted(result, key=lambda r: _normalize_username(r["username"]))
+
+
+def list_secret_users() -> list[dict]:
+    result = []
+    for key, raw in _users_section().items():
+        data = dict(raw)
+        result.append(
+            {
+                "username": str(key),
+                "display_name": str(data.get("display_name", key)),
+                "pais": str(data.get("pais", "")),
+                "role": str(data.get("role", "user")),
+                "enabled": _normalize_bool(data.get("enabled", True), True),
+                "source": "secrets",
+            }
+        )
+    return sorted(result, key=lambda r: _normalize_username(r["username"]))
+
+
+def _write_managed_row(row_index: int, record: dict) -> None:
+    ws = _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
+    values = [[str(record.get(h, "")) for h in MANAGED_USER_HEADERS]]
+    end_col = gspread.utils.rowcol_to_a1(1, len(MANAGED_USER_HEADERS)).rstrip("1")
+    ws.update(values=values, range_name=f"A{row_index}:{end_col}{row_index}")
+
+
+def audit_event(username: str, action: str, module: str, detail: str = "", pais: str = "") -> None:
+    try:
+        ws = _worksheet(AUDIT_SHEET, create=True, headers=AUDIT_HEADERS)
+        ws.append_row(
+            [
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                str(username)[:80],
+                str(pais)[:80],
+                str(action)[:80],
+                str(module)[:80],
+                str(detail)[:300],
+            ],
+            value_input_option="RAW",
+        )
+    except Exception:
+        logger.exception("No fue posible registrar auditoría para accion=%s", action)
+
+
+def list_audit_events(limit: int = 200) -> list[dict]:
+    ws = _worksheet(AUDIT_SHEET, create=False, headers=AUDIT_HEADERS)
+    if ws is None:
+        return []
+    rows = _rows_as_dicts(ws, AUDIT_HEADERS)
+    clean = [{k: r.get(k, "") for k in AUDIT_HEADERS} for r in rows]
+    return list(reversed(clean[-max(1, min(limit, 1000)) :]))
+
+
+def create_managed_user(
+    *,
+    username: str,
+    display_name: str,
+    password: str,
+    pais: str,
+    role: str,
+    enabled: bool,
+    created_by: str,
+    must_change_password: bool = True,
+) -> tuple[bool, str]:
+    normalized = _normalize_username(username)
+    if not re.fullmatch(r"[a-z0-9._-]{3,40}", normalized):
+        return False, "El usuario debe tener 3–40 caracteres: letras minúsculas, números, punto, guion o guion bajo."
+    if _managed_user(normalized) or _secret_user(normalized):
+        return False, "Ya existe un usuario con ese nombre."
+    ok, message = validate_password_strength(password)
+    if not ok:
+        return False, message
+    if role not in {"admin", "coordinator", "user"}:
+        return False, "Rol no válido."
+
+    ensure_management_store()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    record = {
+        "username": normalized,
+        "display_name": " ".join(str(display_name).split()) or normalized,
+        "password_hash": hash_password(password),
+        "pais": str(pais).strip(),
+        "role": role,
+        "enabled": str(bool(enabled)).lower(),
+        "must_change_password": str(bool(must_change_password)).lower(),
+        "created_at": now,
+        "created_by": str(created_by),
+        "updated_at": now,
+        "last_login": "",
+    }
+    try:
+        ws = _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
+        ws.append_row([record[h] for h in MANAGED_USER_HEADERS], value_input_option="RAW")
+        audit_event(created_by, "CREAR_USUARIO", "Administración", f"Usuario {normalized} creado", pais)
+        return True, "Usuario creado correctamente."
+    except Exception:
+        logger.exception("No fue posible crear usuario %s", normalized)
+        return False, "No fue posible crear el usuario en el registro central."
+
+
+def update_managed_user(
+    username: str,
+    *,
+    display_name: str,
+    pais: str,
+    role: str,
+    enabled: bool,
+    updated_by: str,
+) -> tuple[bool, str]:
+    user = _managed_user(username)
+    if not user:
+        return False, "El usuario administrado no existe."
+    if role not in {"admin", "coordinator", "user"}:
+        return False, "Rol no válido."
+    user.update(
+        {
+            "display_name": " ".join(str(display_name).split()) or user["username"],
+            "pais": str(pais).strip(),
+            "role": role,
+            "enabled": str(bool(enabled)).lower(),
+            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+    )
+    try:
+        _write_managed_row(int(user["_row_index"]), user)
+        audit_event(updated_by, "EDITAR_USUARIO", "Administración", f"Usuario {user['username']} actualizado", pais)
+        return True, "Cambios guardados."
+    except Exception:
+        logger.exception("No fue posible actualizar usuario %s", username)
+        return False, "No fue posible guardar los cambios."
+
+
+def set_managed_user_password(
+    username: str,
+    new_password: str,
+    *,
+    updated_by: str,
+    force_change: bool = True,
+) -> tuple[bool, str]:
+    user = _managed_user(username)
+    if not user:
+        return False, "El usuario administrado no existe."
+    ok, message = validate_password_strength(new_password)
+    if not ok:
+        return False, message
+    user["password_hash"] = hash_password(new_password)
+    user["must_change_password"] = str(bool(force_change)).lower()
+    user["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        _write_managed_row(int(user["_row_index"]), user)
+        audit_event(updated_by, "RESTABLECER_PASSWORD", "Administración", f"Contraseña de {user['username']} actualizada", user.get("pais", ""))
+        return True, "Contraseña actualizada correctamente."
+    except Exception:
+        logger.exception("No fue posible cambiar contraseña de %s", username)
+        return False, "No fue posible actualizar la contraseña."
+
+
+def change_own_password(username: str, new_password: str) -> tuple[bool, str]:
+    ok, message = set_managed_user_password(
+        username,
+        new_password,
+        updated_by=username,
+        force_change=False,
+    )
+    if ok and isinstance(st.session_state.get("auth_user"), dict):
+        st.session_state.auth_user["must_change_password"] = False
+    return ok, message
+
+
+def import_secret_users_to_managed(imported_by: str) -> tuple[int, int, str]:
+    ok, message = ensure_management_store()
+    if not ok:
+        return 0, 0, message
+
+    existing = {_normalize_username(u["username"]) for u in list_managed_users()}
+    imported = 0
+    skipped = 0
+    ws = _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    for username, raw in _users_section().items():
+        normalized = _normalize_username(str(username))
+        if normalized in existing:
+            skipped += 1
+            continue
+        data = dict(raw)
+        record = {
+            "username": normalized,
+            "display_name": str(data.get("display_name", username)),
+            "password_hash": str(data.get("password_hash", "")),
+            "pais": str(data.get("pais", "")),
+            "role": str(data.get("role", "user")).strip().lower() or "user",
+            "enabled": str(_normalize_bool(data.get("enabled", True), True)).lower(),
+            "must_change_password": "false",
+            "created_at": now,
+            "created_by": f"import:{imported_by}",
+            "updated_at": now,
+            "last_login": "",
+        }
+        if not record["password_hash"]:
+            skipped += 1
+            continue
+        ws.append_row([record[h] for h in MANAGED_USER_HEADERS], value_input_option="RAW")
+        imported += 1
+        existing.add(normalized)
+
+    audit_event(imported_by, "IMPORTAR_USUARIOS", "Administración", f"Importados={imported}; omitidos={skipped}")
+    return imported, skipped, "Migración finalizada."
+
+
 def local_auth_is_configured() -> bool:
-    return bool(_users_section())
+    if bool(_users_section()):
+        return True
+    try:
+        return bool(list_managed_users())
+    except Exception:
+        return False
 
 
 def oidc_auth_is_configured() -> bool:
@@ -183,11 +586,21 @@ def _clear_attempts(username: str) -> None:
 
 
 def _sync_legacy_session(user: dict) -> None:
-    """Mantiene compatibilidad temporal con páginas v1 que aún consultan logueado/verificado."""
+    """Compatibilidad con páginas v1 durante la transición."""
     st.session_state.logueado = True
     st.session_state.verificado = True
     st.session_state.usuario = str(user.get("username", ""))
     st.session_state.pais_usuario = str(user.get("pais", ""))
+
+
+def _update_last_login(user: dict) -> None:
+    if user.get("source") != "managed" or not user.get("_row_index"):
+        return
+    try:
+        user["last_login"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _write_managed_row(int(user["_row_index"]), user)
+    except Exception:
+        logger.exception("No fue posible actualizar last_login de %s", user.get("username"))
 
 
 def authenticate(username: str, password: str) -> tuple[bool, str]:
@@ -201,8 +614,10 @@ def authenticate(username: str, password: str) -> tuple[bool, str]:
         minutes = max(1, (remaining + 59) // 60)
         return False, f"Acceso temporalmente bloqueado. Intente nuevamente en aproximadamente {minutes} min."
 
-    user = _get_user(normalized)
-    # Respuesta uniforme para evitar revelar si un usuario existe.
+    user = _managed_user(normalized)
+    if user is None:
+        user = _secret_user(normalized)
+
     valid = bool(
         user
         and user.get("enabled", True)
@@ -217,15 +632,20 @@ def authenticate(username: str, password: str) -> tuple[bool, str]:
         return False, "Usuario o contraseña incorrectos."
 
     _clear_attempts(normalized)
-    st.session_state.authenticated = True
-    st.session_state.auth_user = {
+    session_user = {
         "username": user["username"],
         "display_name": str(user.get("display_name", user["username"])),
         "pais": str(user.get("pais", "")),
-        "role": str(user.get("role", "user")),
+        "role": str(user.get("role", "user")).lower(),
+        "source": str(user.get("source", "secrets")),
+        "must_change_password": bool(user.get("must_change_password", False)),
     }
-    _sync_legacy_session(st.session_state.auth_user)
+    st.session_state.authenticated = True
+    st.session_state.auth_user = session_user
+    _sync_legacy_session(session_user)
     st.session_state.last_activity = time.time()
+    _update_last_login(user)
+    audit_event(session_user["username"], "LOGIN_OK", "Autenticación", "Inicio de sesión correcto", session_user.get("pais", ""))
     logger.info("Inicio de sesión correcto para usuario=%s", normalized)
     return True, "Acceso autorizado."
 
@@ -251,8 +671,10 @@ def _oidc_user_record() -> dict | None:
             "username": email,
             "display_name": str(data.get("display_name") or getattr(st.user, "name", "") or email),
             "pais": str(data.get("pais", "")),
-            "role": str(data.get("role", "user")),
+            "role": str(data.get("role", "user")).lower(),
             "auth_method": "oidc",
+            "source": "oidc",
+            "must_change_password": False,
         }
     return None
 
@@ -281,6 +703,8 @@ def current_user() -> dict | None:
 
 def logout() -> None:
     user = current_user()
+    if user:
+        audit_event(user.get("username", ""), "LOGOUT", "Autenticación", "Cierre de sesión", user.get("pais", ""))
     is_oidc = bool(user and user.get("auth_method") == "oidc")
     st.session_state.clear()
     if is_oidc:
@@ -302,11 +726,23 @@ def require_auth() -> dict:
     now = time.time()
     last_activity = float(st.session_state.get("last_activity", now))
     if now - last_activity > settings.session_timeout_minutes * 60:
-        logout()
-        st.warning("⌛ La sesión expiró por inactividad. Inicie sesión nuevamente.")
+        st.session_state.clear()
+        st.warning("La sesión expiró por inactividad. Inicie sesión nuevamente.")
         if st.button("Volver al inicio", type="primary"):
             st.switch_page("Home.py")
         st.stop()
 
     st.session_state.last_activity = now
+    _sync_legacy_session(user)
+    return user
+
+
+def require_role(*roles: str) -> dict:
+    user = require_auth()
+    allowed = {str(r).strip().lower() for r in roles}
+    if str(user.get("role", "user")).lower() not in allowed:
+        st.error("No tiene permisos para acceder a este módulo.")
+        if st.button("Volver al inicio", type="primary"):
+            st.switch_page("Home.py")
+        st.stop()
     return user
