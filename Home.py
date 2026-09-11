@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 from app_ui import (
@@ -11,10 +12,18 @@ from app_ui import (
     render_brand,
     render_sidebar,
     security_note,
+    section,
     stats,
 )
 from auth import (
     auth_is_configured,
+    create_managed_user,
+    ensure_management_store,
+    generate_secure_password,
+    import_secret_users_to_managed,
+    list_audit_events,
+    list_managed_users,
+    list_secret_users,
     authenticate,
     change_own_password,
     current_user,
@@ -22,6 +31,8 @@ from auth import (
     local_auth_is_configured,
     logout,
     oidc_auth_is_configured,
+    set_managed_user_password,
+    update_managed_user,
     require_auth,
     validate_password_strength,
 )
@@ -29,7 +40,7 @@ from auth import (
 st.set_page_config(
     page_title="Plataforma ERSI | VIHCA",
     page_icon="🔐",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
@@ -46,6 +57,334 @@ def cerrar_sesion() -> None:
     logout()
     st.rerun()
 
+
+def render_admin_panel(user: dict) -> None:
+    """Renderiza la administración dentro de Home para evitar dependencias de rutas multipágina."""
+    hero(
+        "Administración segura",
+        "Usuarios, permisos y bitácora",
+        "Gestione el acceso a la plataforma sin editar código ni almacenar contraseñas en texto plano. Los cambios quedan registrados para trazabilidad.",
+    )
+
+    ok_store, store_message = ensure_management_store()
+    if not ok_store:
+        notice(store_message, "danger")
+        security_note("El Service Account necesita permiso de edición sobre el Google Sheets configurado para poder administrar usuarios.")
+        footer("Administración")
+        st.stop()
+
+    managed_users = list_managed_users()
+    secret_users = list_secret_users()
+    active_count = sum(1 for u in managed_users if u.get("enabled"))
+    admin_count = sum(1 for u in managed_users if u.get("role") == "admin" and u.get("enabled"))
+
+    stats(
+        [
+            ("Usuarios administrados", str(len(managed_users))),
+            ("Activos", str(active_count)),
+            ("Administradores", str(admin_count)),
+        ]
+    )
+
+    usuarios_tab, crear_tab, editar_tab, audit_tab = st.tabs(
+        ["Usuarios", "Crear usuario", "Editar / contraseña", "Bitácora"]
+    )
+
+    with usuarios_tab:
+        section(
+            "Usuarios administrados desde la interfaz",
+            "Estos usuarios se almacenan en USUARIOS_SISTEMA con contraseña protegida mediante hash PBKDF2-SHA256.",
+        )
+
+        if managed_users:
+            df_users = pd.DataFrame(
+                [
+                    {
+                        "Usuario": u["username"],
+                        "Nombre": u["display_name"],
+                        "País": u["pais"],
+                        "Rol": {"admin": "Administrador", "coordinator": "Coordinador", "user": "Usuario"}.get(u["role"], u["role"]),
+                        "Estado": "Activo" if u["enabled"] else "Inactivo",
+                        "Cambio de contraseña": "Pendiente" if u["must_change_password"] else "No",
+                        "Último acceso": u["last_login"] or "—",
+                        "Creado por": u["created_by"] or "—",
+                    }
+                    for u in managed_users
+                ]
+            )
+            st.dataframe(df_users, width="stretch", hide_index=True)
+        else:
+            notice("Todavía no hay usuarios administrados desde la interfaz.", "info")
+
+        if secret_users:
+            st.write("")
+            section(
+                "Migración de usuarios actuales",
+                "Sus usuarios de Streamlit Secrets continúan funcionando. Puede copiarlos una sola vez a la gestión dinámica conservando sus hashes actuales.",
+            )
+            notice(
+                "La migración no copia contraseñas en texto plano: únicamente traslada el hash existente. Los bloques de Secrets no se modifican automáticamente.",
+                "info",
+            )
+            with st.expander(f"Ver usuarios detectados en Secrets ({len(secret_users)})"):
+                df_secret = pd.DataFrame(
+                    [
+                        {
+                            "Usuario": u["username"],
+                            "Nombre": u["display_name"],
+                            "País": u["pais"],
+                            "Rol": u["role"],
+                            "Estado": "Activo" if u["enabled"] else "Inactivo",
+                        }
+                        for u in secret_users
+                    ]
+                )
+                st.dataframe(df_secret, width="stretch", hide_index=True)
+
+            if st.button("Migrar usuarios de Secrets", type="primary"):
+                imported, skipped, message = import_secret_users_to_managed(user["username"])
+                if imported:
+                    st.success(f"{message} Importados: {imported}. Ya existentes/omitidos: {skipped}.")
+                    st.rerun()
+                else:
+                    st.info(f"{message} No se agregaron usuarios nuevos; omitidos: {skipped}.")
+
+            security_note(
+                "Después de verificar que los usuarios migrados pueden ingresar, conviene dejar en Secrets únicamente una cuenta administrativa de recuperación."
+            )
+
+    with crear_tab:
+        section(
+            "Crear nuevo usuario",
+            "Asigne el país y rol desde esta pantalla. La contraseña temporal se convierte en hash antes de guardarse.",
+        )
+
+        st.session_state.setdefault("admin_new_password_input", "")
+        st.session_state.setdefault("admin_new_confirm_input", "")
+
+        gen_col, hint_col = st.columns([1, 2.2])
+        with gen_col:
+            if st.button("Generar contraseña segura", width="stretch"):
+                generated = generate_secure_password()
+                st.session_state.admin_new_password_input = generated
+                st.session_state.admin_new_confirm_input = generated
+                st.rerun()
+        with hint_col:
+            st.caption("Puede generar una contraseña temporal o escribir una propia. Debe tener al menos 12 caracteres, mayúscula, minúscula, número y símbolo.")
+
+        with st.form("create_user_form", clear_on_submit=False):
+            c1, c2 = st.columns(2)
+            with c1:
+                new_username = st.text_input("Nombre de usuario*", placeholder="ej. hn_usuario01")
+                new_display_name = st.text_input("Nombre para mostrar*", placeholder="Nombre Apellido")
+                new_country = st.selectbox(
+                    "País asignado*",
+                    ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá", "todos"],
+                    format_func=lambda x: "Todos / Regional" if x == "todos" else x,
+                )
+            with c2:
+                new_role = st.selectbox(
+                    "Rol*",
+                    ["user", "coordinator", "admin"],
+                    format_func=lambda x: {"user": "Usuario", "coordinator": "Coordinador", "admin": "Administrador"}[x],
+                )
+                new_password = st.text_input(
+                    "Contraseña temporal*",
+                    type="password",
+                    key="admin_new_password_input",
+                )
+                new_confirm = st.text_input(
+                    "Confirmar contraseña*",
+                    type="password",
+                    key="admin_new_confirm_input",
+                )
+
+            enabled = st.checkbox("Usuario activo", value=True)
+            force_change = st.checkbox("Solicitar cambio de contraseña en el próximo inicio", value=True)
+            submit_new = st.form_submit_button("Crear usuario", type="primary", width="stretch")
+
+        if submit_new:
+            if new_password != new_confirm:
+                st.error("Las contraseñas no coinciden.")
+            else:
+                valid_password, password_message = validate_password_strength(new_password)
+                if not valid_password:
+                    st.error(password_message)
+                else:
+                    ok, message = create_managed_user(
+                        username=new_username,
+                        display_name=new_display_name,
+                        password=new_password,
+                        pais=new_country,
+                        role=new_role,
+                        enabled=enabled,
+                        created_by=user["username"],
+                        must_change_password=force_change,
+                    )
+                    if ok:
+                        st.session_state.last_created_username = new_username.strip().lower()
+                        st.session_state.last_created_password = new_password
+                        st.success(message)
+                    else:
+                        st.error(message)
+
+        if st.session_state.get("last_created_username") and st.session_state.get("last_created_password"):
+            notice(
+                "Credencial temporal creada. Entréguela al usuario por un canal seguro. Esta es la única pantalla donde conviene copiarla antes de generar otra.",
+                "warning",
+            )
+            st.code(
+                f"Usuario: {st.session_state.last_created_username}\nContraseña temporal: {st.session_state.last_created_password}",
+                language="text",
+            )
+            if st.button("Ocultar credencial temporal creada"):
+                st.session_state.pop("last_created_username", None)
+                st.session_state.pop("last_created_password", None)
+                st.rerun()
+
+    with editar_tab:
+        section(
+            "Editar usuario administrado",
+            "Cambie nombre, país, rol o estado. Para conservar trazabilidad, los usuarios se desactivan en lugar de eliminarse.",
+        )
+
+        current_managed = list_managed_users()
+        if not current_managed:
+            notice("No hay usuarios administrados para editar. Cree uno o migre los usuarios de Secrets.", "info")
+        else:
+            by_username = {u["username"]: u for u in current_managed}
+            selected_username = st.selectbox("Seleccione un usuario", list(by_username.keys()))
+            selected = by_username[selected_username]
+            is_self = selected_username.lower() == str(user.get("username", "")).lower()
+
+            if is_self:
+                notice("Está editando su propia cuenta. No podrá desactivarla ni retirarse el rol Administrador desde esta sesión.", "warning")
+
+            with st.form("edit_user_form"):
+                e1, e2 = st.columns(2)
+                with e1:
+                    edit_name = st.text_input("Nombre para mostrar", value=selected["display_name"])
+                    countries = ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá", "todos"]
+                    try:
+                        country_index = countries.index(selected["pais"])
+                    except ValueError:
+                        country_index = len(countries) - 1
+                    edit_country = st.selectbox(
+                        "País asignado",
+                        countries,
+                        index=country_index,
+                        format_func=lambda x: "Todos / Regional" if x == "todos" else x,
+                    )
+                with e2:
+                    roles = ["user", "coordinator", "admin"]
+                    try:
+                        role_index = roles.index(selected["role"])
+                    except ValueError:
+                        role_index = 0
+                    edit_role = st.selectbox(
+                        "Rol",
+                        roles,
+                        index=role_index,
+                        format_func=lambda x: {"user": "Usuario", "coordinator": "Coordinador", "admin": "Administrador"}[x],
+                        disabled=is_self,
+                    )
+                    edit_enabled = st.checkbox("Usuario activo", value=selected["enabled"], disabled=is_self)
+                    st.caption(f"Último acceso: {selected['last_login'] or 'Sin registro'}")
+
+                save_edit = st.form_submit_button("Guardar cambios", type="primary", width="stretch")
+
+            if save_edit:
+                effective_role = selected["role"] if is_self else edit_role
+                effective_enabled = True if is_self else edit_enabled
+                ok, message = update_managed_user(
+                    selected_username,
+                    display_name=edit_name,
+                    pais=edit_country,
+                    role=effective_role,
+                    enabled=effective_enabled,
+                    updated_by=user["username"],
+                )
+                if ok:
+                    st.success(message)
+                    st.rerun()
+                else:
+                    st.error(message)
+
+            st.write("")
+            section("Restablecer contraseña", "Genere una nueva contraseña temporal para el usuario seleccionado.")
+            st.session_state.setdefault("admin_reset_password_input", "")
+            st.session_state.setdefault("admin_reset_confirm_input", "")
+            if st.button("Generar nueva contraseña temporal"):
+                generated = generate_secure_password()
+                st.session_state.admin_reset_password_input = generated
+                st.session_state.admin_reset_confirm_input = generated
+                st.rerun()
+
+            with st.form("reset_password_form"):
+                reset_password = st.text_input(
+                    "Nueva contraseña",
+                    type="password",
+                    key="admin_reset_password_input",
+                )
+                reset_confirm = st.text_input(
+                    "Confirmar nueva contraseña",
+                    type="password",
+                    key="admin_reset_confirm_input",
+                )
+                require_change = st.checkbox("Solicitar cambio en el próximo inicio", value=True)
+                reset_submit = st.form_submit_button("Restablecer contraseña", type="primary", width="stretch")
+
+            if reset_submit:
+                if reset_password != reset_confirm:
+                    st.error("Las contraseñas no coinciden.")
+                else:
+                    ok, message = set_managed_user_password(
+                        selected_username,
+                        reset_password,
+                        updated_by=user["username"],
+                        force_change=require_change,
+                    )
+                    if ok:
+                        st.session_state.last_reset_username = selected_username
+                        st.session_state.last_reset_password = reset_password
+                        st.success(message)
+                    else:
+                        st.error(message)
+
+            if st.session_state.get("last_reset_username") == selected_username and st.session_state.get("last_reset_password"):
+                notice("Copie la contraseña temporal y entréguela al usuario por un canal seguro.", "warning")
+                st.code(
+                    f"Usuario: {selected_username}\nContraseña temporal: {st.session_state.last_reset_password}",
+                    language="text",
+                )
+                if st.button("Ocultar contraseña temporal restablecida"):
+                    st.session_state.pop("last_reset_username", None)
+                    st.session_state.pop("last_reset_password", None)
+                    st.rerun()
+
+    with audit_tab:
+        section(
+            "Bitácora de actividad",
+            "Muestra los eventos más recientes de autenticación, administración y generación de códigos.",
+        )
+        events = list_audit_events(limit=300)
+        if events:
+            df_audit = pd.DataFrame(events).rename(
+                columns={
+                    "timestamp": "Fecha y hora",
+                    "username": "Usuario",
+                    "pais": "País",
+                    "accion": "Acción",
+                    "modulo": "Módulo",
+                    "detalle": "Detalle",
+                }
+            )
+            st.dataframe(df_audit, width="stretch", hide_index=True)
+        else:
+            notice("La bitácora todavía no contiene eventos.", "info")
+
+    security_note("Las contraseñas reales nunca se almacenan en Google Sheets. Solo se conserva un hash no reversible con salt individual.")
+    footer("Administración de usuarios")
 
 settings = get_security_settings()
 user = current_user()
@@ -136,9 +475,16 @@ render_sidebar(user)
 
 with st.sidebar:
     st.divider()
-    if str(user.get("role", "user")).lower() == "admin":
-        if st.button("⚙️ Administrar usuarios", width="stretch"):
-            st.switch_page("pages/3_Administracion_Usuarios.py")
+    is_admin = str(user.get("role", "user")).lower() == "admin"
+    if is_admin:
+        if st.session_state.get("home_view") == "admin":
+            if st.button("← Volver al inicio", width="stretch"):
+                st.session_state.home_view = "home"
+                st.rerun()
+        else:
+            if st.button("⚙️ Administrar usuarios", width="stretch"):
+                st.session_state.home_view = "admin"
+                st.rerun()
     if st.button("Cerrar sesión", width="stretch"):
         cerrar_sesion()
 
@@ -169,6 +515,15 @@ if user.get("must_change_password") and user.get("source") == "managed":
     security_note("Use una contraseña de al menos 12 caracteres con mayúscula, minúscula, número y símbolo.")
     footer("Plataforma ERSI")
     st.stop()
+
+# La administración se renderiza dentro de Home para no depender de una página registrada por Streamlit.
+if st.session_state.get("home_view") == "admin":
+    if str(user.get("role", "user")).lower() != "admin":
+        st.session_state.home_view = "home"
+        notice("Su cuenta no tiene permisos de administrador.", "danger")
+    else:
+        render_admin_panel(user)
+        st.stop()
 
 hero(
     "Centro operativo ERSI",
@@ -210,7 +565,8 @@ if str(user.get("role", "user")).lower() == "admin":
         with c_action:
             st.write("")
             if st.button("Abrir administración", type="primary", width="stretch"):
-                st.switch_page("pages/3_Administracion_Usuarios.py")
+                st.session_state.home_view = "admin"
+                st.rerun()
 
 st.markdown("#### Estado de la sesión")
 stats(
