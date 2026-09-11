@@ -1,160 +1,159 @@
+from __future__ import annotations
+
 import streamlit as st
-import random
-from datetime import datetime
 
-# === CONFIGURACIÓN ===
-st.set_page_config(page_title="🗃️Centro ERSI", layout="centered")
+from app_ui import APP_VERSION, footer, hero, inject_global_styles, render_brand, render_sidebar, security_note
+from auth import (
+    auth_is_configured,
+    authenticate,
+    current_user,
+    get_security_settings,
+    local_auth_is_configured,
+    logout,
+    oidc_auth_is_configured,
+    require_auth,
+)
 
-def render_footer(org="VIHCA / M&E Regional", app_name="Generador código ERSI", version="v1.2.0"):
-    year = datetime.now().year
-    st.markdown(
-        f"""
-        <style>
-            .footer {{
-                position: fixed;
-                left: 0;
-                bottom: 0;
-                width: 100%;
-                background: rgba(120,255,255,0.92);
-                border-top: 1px solid rgba(0,0,0,0.08);
-                padding: 10px 18px;
-                text-align: center;
-                font-size: 12px;
-                color: #6b7280;
-                z-index: 9999;
-                backdrop-filter: blur(6px);
-            }}
-            .footer b {{
-                color: #111827;
-            }}
-            /* Para que el contenido no quede tapado por el footer */
-            .block-container {{
-                padding-bottom: 70px !important;
-            }}
-        </style>
-        <div class="footer">
-            © {year} <b>{org}</b> — {app_name} {version}. Todos los derechos reservados.
-        </div>
-        """,
-        unsafe_allow_html=True,
+st.set_page_config(
+    page_title="Plataforma ERSI | VIHCA",
+    page_icon="🔐",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
+
+inject_global_styles()
+
+
+def cerrar_sesion() -> None:
+    if st.session_state.get("registro") and not st.session_state.get("descargado", False):
+        st.error("Primero descargue la tabla de códigos generados en esta sesión antes de cerrar sesión.")
+        return
+    logout()
+    st.rerun()
+
+
+settings = get_security_settings()
+user = current_user()
+
+if not user:
+    render_sidebar()
+    col_logo, _ = st.columns([1.2, 2.8])
+    with col_logo:
+        render_brand()
+
+    hero(
+        "Proyecto VIHCA · Plataforma segura",
+        "Identificación ERSI y generación de códigos QR",
+        "Acceso controlado para crear identificadores únicos de voluntarios y materiales QR de referencia de forma consistente y trazable.",
     )
 
-# Llamada (una vez)
-render_footer(org="Proyecto VIHCA", app_name="Generador de códigos ERSI", version="v1.2.0")
+    if not auth_is_configured():
+        st.error("La autenticación segura todavía no está configurada.")
+        st.info(
+            "Configure la autenticación en Streamlit Secrets antes de habilitar el acceso. "
+            "El proyecto incluye .streamlit/secrets.example.toml y la guía SEGURIDAD_Y_DESPLIEGUE.md."
+        )
+        security_note("La versión 2.0 ya no acepta contraseñas escritas directamente dentro de Home.py.")
+        footer("Plataforma ERSI")
+        st.stop()
 
+    # Si existe una sesión OIDC pero el correo no está autorizado, no se revela información adicional.
+    oidc_browser_logged_in = False
+    try:
+        oidc_browser_logged_in = bool(st.user.is_logged_in)
+    except Exception:
+        pass
 
-# === USUARIOS CON PAÍS ASIGNADO ===
-USUARIOS_VALIDOS = {
-    "admin_user": {"clave": "admin1589" , "pais" : "todos"},
-    #USUARIOS HONDURAS
-    "honduras_user": {"clave": "8585", "pais": "Honduras"},
-    "copan_user" : {"clave": "copan123", "pais": "Honduras"},
-    "paraiso_user" : {"clave": "paraiso123", "pais": "Honduras"},
-    "atlantida_user" : {"clave": "atlantida123", "pais": "Honduras"},
-    "tocoa_user" : {"clave": "tocoa123", "pais": "Honduras"},
-    "cortes_user" : {"clave": "cortes123", "pais": "Honduras"},
-    "elmanchen_user" : {"clave": "elmanchen123", "pais": "Honduras"},
-    "comayagua_user" : {"clave": "comayagua123", "pais": "Honduras"},
-    "zamora_user" : {"clave": "zamora123", "pais": "Honduras"},
-    
-    # USUARIOS GUATEMALA
-    "guatemala_user": {"clave": "5656", "pais": "Guatemala"},
-    "guate_user_001": {"clave": "guateuser123", "pais": "Guatemala"},
-    "guate_user_002": {"clave": "guateuser234", "pais": "Guatemala"},
-    "guate_user_003": {"clave": "guateuser567", "pais": "Guatemala"},
-    "guate_user_004": {"clave": "guateuser891", "pais": "Guatemala"},
-    "guate_user_005": {"clave": "guateuser765", "pais": "Guatemala"},
-    # USUARIOS PANAMÁ
-    
-    "panama_user": {"clave": "9595", "pais": "Panamá"},
-    #USUARIOS EL SALVADOR (11 departamentos)
-    "ahuachapan_user": {"clave": "3847", "pais": "El Salvador"},
-    "sonsonate_user": {"clave": "4629", "pais": "El Salvador"},
-    "santa_ana_user": {"clave": "6492", "pais": "El Salvador"},
-    "la_libertad_user": {"clave": "5186", "pais": "El Salvador"},
-    "san_salvador_user": {"clave": "4762", "pais": "El Salvador"},
-    "cuscatlan_user": {"clave": "5724", "pais": "El Salvador"},
-    "la_paz_user": {"clave": "9472", "pais": "El Salvador"},
-    "san_vicente_user": {"clave": "6249", "pais": "El Salvador"},
-    "san_miguel_user": {"clave": "4517", "pais": "El Salvador"},
-    "la_union_user": {"clave": "2194", "pais": "El Salvador"},
-    "usulutan_user": {"clave": "8926", "pais": "El Salvador"},
-    #USUARIOS NICARAGUA
-    
-    "nicaragua_user": {"clave": "7575", "pais": "Nicaragua"}
-    
-}
-if "descargado" not in st.session_state:
-    st.session_state.descargado= False
+    if oidc_browser_logged_in and settings.auth_mode in {"oidc", "both"}:
+        st.error("La cuenta autenticada no está autorizada para utilizar esta aplicación.")
+        if st.button("Cerrar cuenta autenticada", width="stretch"):
+            try:
+                st.logout()
+            except Exception:
+                st.session_state.clear()
+                st.rerun()
+        footer("Plataforma ERSI")
+        st.stop()
+
+    if settings.auth_mode in {"oidc", "both"} and oidc_auth_is_configured():
+        with st.container(border=True):
+            st.markdown("### Acceso institucional")
+            st.caption("Use su cuenta institucional configurada por el administrador.")
+            if st.button("Continuar con inicio de sesión institucional", type="primary", width="stretch"):
+                st.login()
+        if settings.auth_mode == "both":
+            st.markdown("<div style='text-align:center;color:#64748b;margin:8px 0'>o use credenciales locales autorizadas</div>", unsafe_allow_html=True)
+
+    if settings.auth_mode in {"local", "both"} and local_auth_is_configured():
+        left, center, right = st.columns([1, 1.7, 1])
+        with center:
+            with st.container(border=True):
+                st.markdown("### Acceso con credenciales")
+                st.caption("Ingrese con las credenciales autorizadas por VIHCA.")
+                with st.form("login_form", clear_on_submit=False):
+                    username = st.text_input("Usuario", placeholder="Ingrese su usuario")
+                    password = st.text_input("Contraseña", type="password", placeholder="••••••••••••")
+                    submitted = st.form_submit_button("Ingresar de forma segura", type="primary", width="stretch")
+
+                if submitted:
+                    ok, message = authenticate(username, password)
+                    if ok:
+                        st.success(message)
+                        st.rerun()
+                    else:
+                        st.error(message)
+
+                st.caption(
+                    f"Protección activa: bloqueo tras intentos fallidos · sesión expira tras "
+                    f"{settings.session_timeout_minutes} min de inactividad."
+                )
+
+    security_note(
+        "Las credenciales locales se validan con hash PBKDF2 y se almacenan en Streamlit Secrets. También puede usar autenticación institucional OIDC con Google, Microsoft, Okta u otro proveedor compatible."
+    )
+    footer("Plataforma ERSI")
+    st.stop()
+
+# Revalida expiración de sesión y actualiza actividad.
+user = require_auth()
+render_sidebar(user)
+
+with st.sidebar:
+    st.divider()
+    if st.button("Cerrar sesión", width="stretch"):
+        cerrar_sesion()
+
+hero(
+    "Centro operativo ERSI",
+    f"Bienvenido, {user.get('display_name') or user.get('username')}",
+    "Seleccione el flujo de trabajo que necesita. La sesión conserva el último código ERSI para agilizar la creación del QR.",
+)
+
 if st.session_state.get("registro") and not st.session_state.get("descargado", False):
-    st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión si ha generado códigos.")
+    st.warning("Tiene códigos generados sin descargar. Descargue la tabla de la sesión antes de cerrar.")
 
-    
-# === SESIÓN ===
-if "logueado" not in st.session_state:
-    st.session_state.logueado = False
-if "verificado" not in st.session_state:
-    st.session_state.verificado = False
-if "usuario" not in st.session_state:
-    st.session_state.usuario = ""
-if "pais_usuario" not in st.session_state:
-    st.session_state.pais_usuario = ""
-if "codigo_verificacion" not in st.session_state:
-    st.session_state.codigo_verificacion = None
-
-# === LOGIN ===
-if not st.session_state.logueado:
-    st.title("🔐 Iniciar sesión")
-    usuario = st.text_input("Usuario")
-    clave = st.text_input("Contraseña", type="password")
-    login = st.button("Ingresar")
-    
-
-    if login:
-        if usuario in USUARIOS_VALIDOS and clave == USUARIOS_VALIDOS[usuario]["clave"]:
-            codigo = str(random.randint(1000, 9999))
-            st.session_state.codigo_verificacion = codigo
-            st.session_state.usuario = usuario
-            st.session_state.pais_usuario = USUARIOS_VALIDOS[usuario]["pais"]
-            st.session_state.logueado = True
-            st.session_state.verificado = False
-            st.rerun()
-        else:
-            st.error("Usuario o contraseña incorrectos.")
-
-# === VERIFICACIÓN POR CÓDIGO ===
-elif st.session_state.logueado and not st.session_state.verificado:
-    st.title("🔐 Verificación adicional")
-    st.write("Por seguridad, ingrese el siguiente código para continuar:")
-    st.code(st.session_state.codigo_verificacion, language="bash")
-    codigo_ingresado = st.text_input("Código de verificación", max_chars=4)
-
-    if st.button("Verificar"):
-        if codigo_ingresado == st.session_state.codigo_verificacion:
-            st.session_state.verificado = True
-            st.rerun()
-        else:
-            st.error("Código incorrecto.")
-
-# === CONTENIDO DE LA APP ===
-elif st.session_state.verificado:
-    st.title("📲 Bienvenido al generador de códigos únicos de identificación para voluntarios y creación de QR")
-    st.write(f"Hola bienvenido (a), **{st.session_state.usuario}**")
-    st.write("Seleccione una opción: ⬇️")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🧾 Generar Codigo ERSI"):
+col1, col2 = st.columns(2, gap="large")
+with col1:
+    with st.container(border=True):
+        st.markdown("### 🧬 Código ERSI")
+        st.write("Genere un identificador único, registre el centro de salud y guarde el evento en Google Sheets.")
+        st.caption("Incluye validación de país, sitio, datos mínimos y trazabilidad del usuario que registra.")
+        if st.button("Abrir generador ERSI", type="primary", width="stretch"):
             st.switch_page("pages/1_Generador_Codigo_ERSI.py")
-    with col2:
-        if st.button("🔐 Generar Codigo QR"):
+
+with col2:
+    with st.container(border=True):
+        st.markdown("### ▦ Código QR")
+        st.write("Transforme el código ERSI en una pieza QR lista para entregar o compartir con el voluntario.")
+        st.caption("Incluye clínica, contacto TBAC y diseño de salida listo para PNG.")
+        if st.button("Abrir generador QR", width="stretch"):
             st.switch_page("pages/2_Generador_Codigo_QR.py")
-    
-    if st.button("Cerrar sesión"):
-        if "registro" in st.session_state and st.session_state["registro"] and not st.session_state.descargado:
-            st.error("❌ Primero debes descargar la tabla virtual antes de cerrar sesión. ")
-       
-        else:
-            st.session_state.clear()
-            st.rerun()
-        #st.warning("⚠️ Debe descargar la tabla virtual antes de cerrar sesión.")
+
+st.markdown("#### Estado de la sesión")
+a, b, c = st.columns(3)
+a.metric("País asignado", user.get("pais", "—"))
+b.metric("Códigos en sesión", len(st.session_state.get("registro", [])))
+c.metric("Versión", APP_VERSION)
+
+security_note("No comparta credenciales ni deje la sesión abierta en equipos de uso compartido. Use siempre Cerrar sesión al finalizar.")
+footer("Plataforma ERSI")

@@ -1,23 +1,15 @@
-# Revisión técnica — Generador ERSI / QR
+# Revisión técnica — Plataforma ERSI v2.0
 
-Versión revisada para Streamlit 1.63.0 y Python 3.13. Se fija pandas 2.2.3 por estabilidad y compatibilidad con Python 3.13.
+Esta versión reemplaza la revisión v1.2.x e incorpora una renovación visual y de seguridad.
 
-Cambios principales:
+Validaciones realizadas antes de empaquetar:
 
-- `st.image(..., use_column_width=...)` reemplazado por `width="content"`.
-- `st.dataframe(..., use_container_width=True)` reemplazado por `width="stretch"`.
-- Validación de edad corregida para evitar `TypeError` cuando el valor es `None`.
-- Ambas páginas internas exigen `logueado=True` y `verificado=True`.
-- Acceso a Google Sheets protegido con manejo de errores y `st.cache_resource`.
-- Si falla la lectura de Google Sheets, no se genera un nuevo correlativo.
-- Si falla el guardado en Google Sheets, el registro no se agrega a la sesión.
-- El correlativo ahora reconoce sufijos de más de 3 dígitos (`999`, `1000`, etc.).
-- Se agregó un bloqueo compartido para reducir duplicados entre sesiones concurrentes del mismo proceso.
-- Si se genera un registro después de descargar el Excel, `descargado` vuelve a `False`.
-- Rutas de CSV y fuentes se resuelven desde la raíz del proyecto.
-- Limpieza de `NaN` del catálogo para evitar opciones literales como `nan`.
-- Dependencias fijadas en `requirements.txt` y se retiraron paquetes no usados (`oauth2client`, `chardet`).
+- Compilación sintáctica de `Home.py`, `auth.py`, `app_ui.py`, ambas páginas y la herramienta de hashes.
+- Validación TOML del ejemplo de Secrets.
+- Prueba aislada de construcción de la tarjeta QR con Pillow/qrcode.
+- Decodificación de la imagen QR de prueba: el contenido recuperado coincide exactamente con el código ERSI de entrada.
+- Verificación criptográfica de que los hashes del paquete privado de migración corresponden a las nuevas contraseñas temporales generadas.
 
-## Recomendación de seguridad pendiente
+No se realizó una escritura real contra la hoja Google Sheets del usuario porque las credenciales de producción permanecen, correctamente, fuera del proyecto.
 
-Los usuarios y contraseñas continúan definidos en `Home.py` para no cambiar el mecanismo de acceso existente. Deben migrarse a `st.secrets` antes de publicar el repositorio de forma pública. El código de verificación mostrado en la misma pantalla no constituye un segundo factor real; sirve únicamente como paso adicional de confirmación.
+Consulte `CAMBIOS_V2.md` y `SEGURIDAD_Y_DESPLIEGUE.md`.
