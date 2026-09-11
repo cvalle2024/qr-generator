@@ -10,6 +10,7 @@ import secrets as pysecrets
 import string
 import threading
 import time
+import unicodedata
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime
@@ -175,6 +176,25 @@ def generate_secure_password(length: int = 16) -> str:
 
 def _normalize_username(username: str) -> str:
     return str(username or "").strip().lower()
+
+
+def suggest_username(value: str) -> str:
+    """Convierte un nombre o texto libre en un usuario seguro y legible.
+
+    Ejemplo: ``Paola Argüello`` -> ``paola.arguello``.
+    Conserva puntos, guiones y guiones bajos válidos.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    normalized = unicodedata.normalize("NFKD", raw)
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    normalized = normalized.lower()
+    normalized = re.sub(r"\s+", ".", normalized)
+    normalized = re.sub(r"[^a-z0-9._-]", "", normalized)
+    normalized = re.sub(r"\.{2,}", ".", normalized)
+    normalized = normalized.strip("._-")
+    return normalized[:40]
 
 
 def _normalize_bool(value, default: bool = False) -> bool:
@@ -374,9 +394,9 @@ def create_managed_user(
     created_by: str,
     must_change_password: bool = True,
 ) -> tuple[bool, str]:
-    normalized = _normalize_username(username)
+    normalized = suggest_username(username)
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", normalized):
-        return False, "El usuario debe tener 3–40 caracteres: letras minúsculas, números, punto, guion o guion bajo."
+        return False, "No fue posible construir un usuario válido. Use al menos 3 caracteres entre letras, números, punto, guion o guion bajo."
     if _managed_user(normalized) or _secret_user(normalized):
         return False, "Ya existe un usuario con ese nombre."
     ok, message = validate_password_strength(password)

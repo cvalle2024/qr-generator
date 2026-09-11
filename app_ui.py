@@ -8,7 +8,7 @@ import streamlit as st
 
 ROOT_DIR = Path(__file__).resolve().parent
 LOGO_PATH = ROOT_DIR / "logo_vihca.png"
-APP_VERSION = "v2.2.0"
+APP_VERSION = "v2.2.3"
 
 
 def inject_global_styles() -> None:
@@ -54,8 +54,7 @@ def inject_global_styles() -> None:
         [data-testid="stMainBlockContainer"] h6,
         [data-testid="stMainBlockContainer"] p,
         [data-testid="stMainBlockContainer"] label,
-        [data-testid="stMainBlockContainer"] li,
-        [data-testid="stMainBlockContainer"] span {
+        [data-testid="stMainBlockContainer"] li {
             color: var(--vihca-text);
         }
 
@@ -103,17 +102,20 @@ def inject_global_styles() -> None:
             text-transform: uppercase;
             margin-bottom: 10px;
         }
-        .vh-hero h1 {
+        .vh-hero h1, .vh-hero h1 * {
             color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
             font-size: clamp(1.7rem, 3vw, 2.55rem);
             line-height: 1.08;
             margin: 0 0 12px 0;
             letter-spacing: -.03em;
+            text-shadow: 0 1px 1px rgba(0,0,0,.08);
         }
-        .vh-hero p {
-            color: #d0e0e6 !important;
+        .vh-hero p, .vh-hero p * {
+            color: #d8e8ee !important;
+            -webkit-text-fill-color: #d8e8ee !important;
             font-size: 15px;
-            max-width: 820px;
+            max-width: 900px;
             margin: 0;
             line-height: 1.65;
         }
@@ -155,6 +157,57 @@ def inject_global_styles() -> None:
         }
         .vh-card-title { font-size: 1rem; font-weight: 850; color:#0f172a !important; margin:0 0 6px; }
         .vh-card-copy { font-size:.89rem; line-height:1.58; color:#526277 !important; margin:0; }
+
+        .vh-module-head {
+            min-height: 185px;
+            display:flex;
+            flex-direction:column;
+            justify-content:flex-start;
+            padding: 3px 1px 8px 1px;
+        }
+        .vh-module-icon {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:42px;
+            height:42px;
+            border-radius:13px;
+            background:linear-gradient(135deg, rgba(15,159,180,.13), rgba(23,105,170,.10));
+            border:1px solid rgba(15,159,180,.18);
+            font-size:21px;
+            margin-bottom:14px;
+        }
+        .vh-module-title {
+            color:#0f172a !important;
+            -webkit-text-fill-color:#0f172a !important;
+            font-size:1.28rem;
+            line-height:1.2;
+            font-weight:900;
+            letter-spacing:-.02em;
+            margin-bottom:8px;
+        }
+        .vh-module-copy {
+            color:#334155 !important;
+            -webkit-text-fill-color:#334155 !important;
+            font-size:.96rem;
+            line-height:1.55;
+            margin-bottom:10px;
+        }
+        .vh-module-meta {
+            color:#64748b !important;
+            -webkit-text-fill-color:#64748b !important;
+            font-size:.82rem;
+            line-height:1.5;
+            margin-top:auto;
+        }
+        .vh-session-heading {
+            color:#0f172a !important;
+            -webkit-text-fill-color:#0f172a !important;
+            font-size:1.28rem;
+            font-weight:900;
+            letter-spacing:-.02em;
+            margin:24px 0 8px 0;
+        }
 
         .vh-security-note {
             display:flex;
@@ -296,9 +349,9 @@ def hero(kicker: str, title: str, subtitle: str) -> None:
     st.markdown(
         f"""
         <div class="vh-hero">
-            <div class="vh-kicker">{escape(kicker)}</div>
-            <h1>{escape(title)}</h1>
-            <p>{escape(subtitle)}</p>
+            <div class="vh-kicker" style="color:#83e6ef !important;-webkit-text-fill-color:#83e6ef !important;">{escape(kicker)}</div>
+            <h1 style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;">{escape(title)}</h1>
+            <p style="color:#d8e8ee !important;-webkit-text-fill-color:#d8e8ee !important;">{escape(subtitle)}</p>
         </div>
         """,
         unsafe_allow_html=True,

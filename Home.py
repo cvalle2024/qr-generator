@@ -35,6 +35,7 @@ from auth import (
     update_managed_user,
     require_auth,
     validate_password_strength,
+    suggest_username,
 )
 
 st.set_page_config(
@@ -175,8 +176,17 @@ def render_admin_panel(user: dict) -> None:
         with st.form("create_user_form", clear_on_submit=False):
             c1, c2 = st.columns(2)
             with c1:
-                new_username = st.text_input("Nombre de usuario*", placeholder="ej. hn_usuario01")
-                new_display_name = st.text_input("Nombre para mostrar*", placeholder="Nombre Apellido")
+                new_display_name = st.text_input(
+                    "Nombre completo / para mostrar*",
+                    placeholder="Ej. Paola Argüello",
+                    help="Este es el nombre que verá el equipo dentro de la plataforma. Puede contener espacios, mayúsculas y tildes.",
+                )
+                new_username = st.text_input(
+                    "Usuario para iniciar sesión*",
+                    placeholder="Ej. paola.arguello",
+                    help="Puede escribir un usuario directamente o incluso un nombre completo; el sistema lo convertirá a un formato válido (minúsculas y sin espacios).",
+                )
+                st.caption("Ejemplo: Paola Argüello → paola.arguello. También se permiten punto, guion y guion bajo.")
                 new_country = st.selectbox(
                     "País asignado*",
                     ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá", "todos"],
@@ -204,7 +214,27 @@ def render_admin_panel(user: dict) -> None:
             submit_new = st.form_submit_button("Crear usuario", type="primary", width="stretch")
 
         if submit_new:
-            if new_password != new_confirm:
+            # Compatibilidad UX: si los campos fueron llenados al revés (nombre completo en usuario
+            # y un identificador válido en nombre para mostrar), los intercambiamos automáticamente.
+            effective_display_name = new_display_name.strip()
+            effective_username_input = new_username.strip()
+            display_as_username = suggest_username(effective_display_name)
+            username_as_username = suggest_username(effective_username_input)
+            if (
+                " " in effective_username_input
+                and effective_display_name
+                and display_as_username == effective_display_name.lower()
+                and 3 <= len(display_as_username) <= 40
+            ):
+                effective_display_name, effective_username_input = effective_username_input, effective_display_name
+
+            normalized_username = suggest_username(effective_username_input or effective_display_name)
+
+            if not effective_display_name:
+                st.error("Ingrese el nombre completo o nombre para mostrar.")
+            elif len(normalized_username) < 3:
+                st.error("Ingrese un usuario de al menos 3 caracteres. También puede dejar un nombre completo para que el sistema lo normalice.")
+            elif new_password != new_confirm:
                 st.error("Las contraseñas no coinciden.")
             else:
                 valid_password, password_message = validate_password_strength(new_password)
@@ -212,8 +242,8 @@ def render_admin_panel(user: dict) -> None:
                     st.error(password_message)
                 else:
                     ok, message = create_managed_user(
-                        username=new_username,
-                        display_name=new_display_name,
+                        username=normalized_username,
+                        display_name=effective_display_name,
                         password=new_password,
                         pais=new_country,
                         role=new_role,
@@ -222,9 +252,9 @@ def render_admin_panel(user: dict) -> None:
                         must_change_password=force_change,
                     )
                     if ok:
-                        st.session_state.last_created_username = new_username.strip().lower()
+                        st.session_state.last_created_username = normalized_username
                         st.session_state.last_created_password = new_password
-                        st.success(message)
+                        st.success(f"{message} Usuario de acceso: {normalized_username}")
                     else:
                         st.error(message)
 
@@ -527,31 +557,47 @@ if st.session_state.get("home_view") == "admin":
 
 hero(
     "Centro operativo ERSI",
-    f"Bienvenido, {user.get('display_name') or user.get('username')}",
-    "Seleccione el módulo que necesita. El último código ERSI generado permanece disponible durante la sesión para agilizar la creación del QR.",
+    f"Hola, {user.get('display_name') or user.get('username')}",
+    "Gestione identificadores ERSI y genere tarjetas QR desde un mismo espacio. El último código creado permanece disponible durante la sesión para continuar el flujo sin volver a digitarlo.",
 )
 
 if st.session_state.get("registro") and not st.session_state.get("descargado", False):
     notice(
-        "Tiene códigos generados pendientes de descarga. Guarde la tabla de la sesión antes de cerrar.",
+        "Hay códigos de esta sesión pendientes de descargar. Descargue la tabla antes de cerrar sesión para conservar su respaldo local.",
         "warning",
     )
 
 col1, col2 = st.columns(2, gap="large")
 with col1:
     with st.container(border=True):
-        st.markdown("### 🧬 Generador ERSI")
-        st.write("Cree el identificador único del voluntario y registre el evento en la hoja central.")
-        st.caption("Incluye validación de país, servicio de salud, datos mínimos y trazabilidad del usuario que registra.")
-        if st.button("Abrir generador ERSI", type="primary", width="stretch"):
+        st.markdown(
+            """
+            <div class="vh-module-head">
+              <div class="vh-module-icon">🧬</div>
+              <div class="vh-module-title">Identificación ERSI</div>
+              <div class="vh-module-copy">Genere el identificador único del voluntario y registre el evento de forma trazable.</div>
+              <div class="vh-module-meta">País y servicio de salud · validaciones automáticas · registro centralizado</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("Crear código ERSI", type="primary", width="stretch"):
             st.switch_page("pages/1_Generador_Codigo_ERSI.py")
 
 with col2:
     with st.container(border=True):
-        st.markdown("### ▦ Generador QR")
-        st.write("Convierta el código ERSI en una tarjeta QR lista para entregar, imprimir o compartir.")
-        st.caption("Incluye clínica, contacto TBAC, prefijo del país y archivo PNG de alta legibilidad.")
-        if st.button("Abrir generador QR", type="primary", width="stretch"):
+        st.markdown(
+            """
+            <div class="vh-module-head">
+              <div class="vh-module-icon">▦</div>
+              <div class="vh-module-title">Tarjeta QR</div>
+              <div class="vh-module-copy">Convierta un código ERSI en una tarjeta QR clara y lista para entregar o compartir.</div>
+              <div class="vh-module-meta">Código ERSI · clínica · contacto TBAC · archivo PNG</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("Crear tarjeta QR", type="primary", width="stretch"):
             st.switch_page("pages/2_Generador_Codigo_QR.py")
 
 if str(user.get("role", "user")).lower() == "admin":
@@ -568,7 +614,7 @@ if str(user.get("role", "user")).lower() == "admin":
                 st.session_state.home_view = "admin"
                 st.rerun()
 
-st.markdown("#### Estado de la sesión")
+st.markdown('<div class="vh-session-heading">Estado de la sesión</div>', unsafe_allow_html=True)
 stats(
     [
         ("País asignado", user.get("pais", "—")),
