@@ -1,0 +1,16 @@
+ACTUALIZACIÓN V2 - CORREGIR NAVEGACIÓN Y SESIÓN
+
+El síntoma "Debe iniciar sesión para acceder" al abrir Código QR indica que el repositorio conserva la página v1 antigua.
+
+Reemplace en GitHub, manteniendo exactamente estas rutas:
+- Home.py
+- auth.py
+- app_ui.py
+- requirements.txt
+- pages/1_Generador_Codigo_ERSI.py
+- pages/2_Generador_Codigo_QR.py
+
+NO coloque estos archivos dentro de otra carpeta adicional.
+NO borre Streamlit Secrets.
+
+Después del commit, reinicie/reboot la app de Streamlit Cloud.
