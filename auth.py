@@ -488,14 +488,28 @@ def set_managed_user_password(
 
 
 def change_own_password(username: str, new_password: str) -> tuple[bool, str]:
+    user = _managed_user(username)
+    if not user:
+        return False, "No fue posible localizar su cuenta administrada."
+    if verify_password(new_password, str(user.get("password_hash", ""))):
+        return False, "La nueva contraseña debe ser diferente de la contraseña temporal utilizada para ingresar."
+
     ok, message = set_managed_user_password(
         username,
         new_password,
         updated_by=username,
         force_change=False,
     )
-    if ok and isinstance(st.session_state.get("auth_user"), dict):
-        st.session_state.auth_user["must_change_password"] = False
+    if ok:
+        if isinstance(st.session_state.get("auth_user"), dict):
+            st.session_state.auth_user["must_change_password"] = False
+        audit_event(
+            username,
+            "CAMBIAR_PASSWORD_PROPIO",
+            "Autenticación",
+            "Contraseña personal establecida correctamente",
+            user.get("pais", ""),
+        )
     return ok, message
 
 
@@ -523,7 +537,9 @@ def import_secret_users_to_managed(imported_by: str) -> tuple[int, int, str]:
             "pais": str(data.get("pais", "")),
             "role": str(data.get("role", "user")).strip().lower() or "user",
             "enabled": str(_normalize_bool(data.get("enabled", True), True)).lower(),
-            "must_change_password": "false",
+            # Los usuarios heredados conservan la contraseña temporal segura ya
+            # configurada, pero deben crear una contraseña personal al primer acceso.
+            "must_change_password": "true",
             "created_at": now,
             "created_by": f"import:{imported_by}",
             "updated_at": now,
@@ -623,6 +639,100 @@ def _update_last_login(user: dict) -> None:
         logger.exception("No fue posible actualizar last_login de %s", user.get("username"))
 
 
+def _upgrade_legacy_imported_user_for_first_login(user: dict) -> dict:
+    """Activa una sola vez el cambio obligatorio para usuarios migrados con v2.2.x.
+
+    Las versiones anteriores importaban desde Secrets con ``must_change_password=false``.
+    Esos registros nacían con ``created_at == updated_at``. Al primer acceso después de
+    esta actualización, se marca el cambio obligatorio y se actualiza ``updated_at``.
+    Después de que el usuario crea su contraseña personal, el registro vuelve a false
+    y no se vuelve a activar automáticamente.
+    """
+    if not user or user.get("source") != "managed":
+        return user
+    if bool(user.get("must_change_password", False)):
+        return user
+    created_by = str(user.get("created_by", "")).strip().lower()
+    if not created_by.startswith("import:"):
+        return user
+
+    created_at = str(user.get("created_at", "")).strip()
+    updated_at = str(user.get("updated_at", "")).strip()
+    # Registros importados por la versión anterior no habían sido modificados después
+    # de su migración. Este control evita volver a forzar a quien ya actualizó su clave.
+    if created_at and updated_at and created_at != updated_at:
+        return user
+
+    try:
+        user["must_change_password"] = "true"
+        user["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _write_managed_row(int(user["_row_index"]), user)
+        audit_event(
+            user.get("username", ""),
+            "ACTIVAR_CAMBIO_INICIAL_PASSWORD",
+            "Autenticación",
+            "Usuario migrado: cambio de contraseña requerido en el primer acceso",
+            user.get("pais", ""),
+        )
+        user["must_change_password"] = True
+    except Exception:
+        # No se bloquea el acceso por una migración de metadatos; queda registro en logs
+        # y el administrador puede forzar el cambio desde el panel.
+        logger.exception("No fue posible activar cambio inicial para %s", user.get("username"))
+    return user
+
+
+def force_first_login_password_change_for_imported_users(updated_by: str) -> tuple[int, int, str]:
+    """Activa una sola vez el cambio obligatorio para cuentas heredadas ya migradas.
+
+    La acción queda registrada en la bitácora. Así, aunque luego cada usuario cambie su
+    contraseña y su bandera vuelva a ``false``, pulsar nuevamente el botón no los fuerza
+    otra vez. Los usuarios que se importen después ya nacen con el cambio obligatorio.
+    """
+    ws = _worksheet(MANAGED_USERS_SHEET, create=False, headers=MANAGED_USER_HEADERS)
+    if ws is None:
+        return 0, 0, "No se encontró la hoja de usuarios administrados."
+
+    marker_action = "ROTACION_INICIAL_MIGRADOS_V224"
+    try:
+        audit_ws = _worksheet(AUDIT_SHEET, create=True, headers=AUDIT_HEADERS)
+        audit_rows = _rows_as_dicts(audit_ws, AUDIT_HEADERS)
+        if any(str(r.get("accion", "")).strip() == marker_action for r in audit_rows):
+            return 0, 0, "Esta actualización de seguridad ya fue aplicada anteriormente."
+    except Exception:
+        logger.exception("No fue posible comprobar el marcador de rotación inicial")
+        return 0, 0, "No fue posible verificar el estado de la actualización de seguridad."
+
+    changed = 0
+    skipped = 0
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        rows = _rows_as_dicts(ws, MANAGED_USER_HEADERS)
+        for row in rows:
+            created_by = str(row.get("created_by", "")).strip().lower()
+            already_pending = _normalize_bool(row.get("must_change_password"), False)
+            if not created_by.startswith("import:") or already_pending:
+                skipped += 1
+                continue
+            row["must_change_password"] = "true"
+            row["updated_at"] = now
+            _write_managed_row(int(row["_row_index"]), row)
+            changed += 1
+
+        audit_event(
+            updated_by,
+            marker_action,
+            "Administración",
+            f"Marcados={changed}; omitidos={skipped}",
+        )
+        if changed:
+            return changed, skipped, "Cambio obligatorio activado para los usuarios migrados pendientes."
+        return changed, skipped, "No se encontraron usuarios migrados pendientes de esta actualización."
+    except Exception:
+        logger.exception("No fue posible marcar usuarios migrados para cambio de contraseña")
+        return changed, skipped, "No fue posible actualizar el estado de los usuarios migrados."
+
+
 def authenticate(username: str, password: str) -> tuple[bool, str]:
     settings = get_security_settings()
     normalized = _normalize_username(username)
@@ -652,6 +762,11 @@ def authenticate(username: str, password: str) -> tuple[bool, str]:
         return False, "Usuario o contraseña incorrectos."
 
     _clear_attempts(normalized)
+    if user.get("source") == "managed":
+        # Solo después de validar correctamente la contraseña se aplica la migración
+        # de seguridad a cuentas heredadas de versiones anteriores.
+        user = _upgrade_legacy_imported_user_for_first_login(user)
+
     session_user = {
         "username": user["username"],
         "display_name": str(user.get("display_name", user["username"])),
@@ -734,7 +849,7 @@ def logout() -> None:
             logger.exception("No se pudo completar st.logout()")
 
 
-def require_auth() -> dict:
+def require_auth(*, allow_password_change: bool = False) -> dict:
     user = current_user()
     if not user:
         st.warning("🔐 Su sesión no está autenticada. Regrese al inicio e ingrese sus credenciales.")
@@ -754,6 +869,21 @@ def require_auth() -> dict:
 
     st.session_state.last_activity = now
     _sync_legacy_session(user)
+
+    # No permite saltarse el cambio obligatorio entrando directamente a ERSI/QR.
+    # Home pasa allow_password_change=True porque allí se muestra el formulario seguro.
+    if (
+        user.get("source") == "managed"
+        and user.get("must_change_password")
+        and not allow_password_change
+    ):
+        st.info("Por seguridad, primero debe crear su contraseña personal.")
+        try:
+            st.switch_page("Home.py")
+        except Exception:
+            st.warning("Regrese al inicio para completar el cambio de contraseña.")
+        st.stop()
+
     return user
 
 

@@ -21,6 +21,7 @@ from auth import (
     ensure_management_store,
     generate_secure_password,
     import_secret_users_to_managed,
+    force_first_login_password_change_for_imported_users,
     list_audit_events,
     list_managed_users,
     list_secret_users,
@@ -145,13 +146,29 @@ def render_admin_panel(user: dict) -> None:
             if st.button("Migrar usuarios de Secrets", type="primary"):
                 imported, skipped, message = import_secret_users_to_managed(user["username"])
                 if imported:
-                    st.success(f"{message} Importados: {imported}. Ya existentes/omitidos: {skipped}.")
+                    st.success(
+                        f"{message} Importados: {imported}. Ya existentes/omitidos: {skipped}. "
+                        "Los nuevos usuarios migrados deberán crear una contraseña personal en su primer ingreso."
+                    )
                     st.rerun()
                 else:
                     st.info(f"{message} No se agregaron usuarios nuevos; omitidos: {skipped}.")
 
+            st.write("")
+            notice(
+                "Actualización de seguridad: si ya migró usuarios con una versión anterior, puede activar una sola vez el cambio obligatorio para esas cuentas. No cambia la contraseña temporal que ya les fue entregada.",
+                "warning",
+            )
+            if st.button("Activar cambio de contraseña para usuarios migrados", width="stretch"):
+                changed, skipped, message = force_first_login_password_change_for_imported_users(user["username"])
+                if changed:
+                    st.success(f"{message} Usuarios marcados: {changed}. Omitidos: {skipped}.")
+                    st.rerun()
+                else:
+                    st.info(f"{message} Omitidos: {skipped}.")
+
             security_note(
-                "Después de verificar que los usuarios migrados pueden ingresar, conviene dejar en Secrets únicamente una cuenta administrativa de recuperación."
+                "Después de verificar que los usuarios migrados pueden ingresar y cambiar su contraseña, conviene dejar en Secrets únicamente una cuenta administrativa de recuperación."
             )
 
     with crear_tab:
@@ -500,7 +517,7 @@ if not user:
     footer("Plataforma ERSI")
     st.stop()
 
-user = require_auth()
+user = require_auth(allow_password_change=True)
 render_sidebar(user)
 
 with st.sidebar:
@@ -523,7 +540,7 @@ if user.get("must_change_password") and user.get("source") == "managed":
     hero(
         "Seguridad de la cuenta",
         "Cambie su contraseña temporal",
-        "Antes de continuar, establezca una contraseña personal. La contraseña temporal dejará de ser válida inmediatamente.",
+        "Este es su primer acceso al sistema actualizado. Cree una contraseña personal antes de continuar; la contraseña temporal dejará de funcionar al guardar la nueva.",
     )
     with st.form("force_password_change"):
         new_password = st.text_input("Nueva contraseña", type="password")
@@ -542,7 +559,7 @@ if user.get("must_change_password") and user.get("source") == "managed":
                 st.rerun()
             else:
                 st.error(message)
-    security_note("Use una contraseña de al menos 12 caracteres con mayúscula, minúscula, número y símbolo.")
+    security_note("La nueva contraseña debe tener al menos 12 caracteres e incluir mayúscula, minúscula, número y símbolo. Debe ser diferente de la contraseña temporal.")
     footer("Plataforma ERSI")
     st.stop()
 
