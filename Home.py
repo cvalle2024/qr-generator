@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
+import auth as auth_backend
 
 from app_ui import (
     APP_VERSION,
@@ -37,7 +38,50 @@ from auth import (
     require_auth,
     validate_password_strength,
     suggest_username,
-)
+ )
+
+
+def change_password_with_current(username: str, current_password: str, new_password: str) -> tuple[bool, str]:
+    """Compatibilidad V2.3.1 para cambio voluntario de contraseña.
+
+    Usa el backend V2.3 cuando está disponible. Si Streamlit todavía carga
+    un auth.py V2.2.x, aplica un fallback seguro con las funciones públicas
+    que ya existían en esa versión. Esto evita que Home falle durante una
+    actualización parcial del repositorio.
+    """
+    native = getattr(auth_backend, "change_password_with_current", None)
+    if callable(native):
+        return native(username, current_password, new_password)
+
+    verify = getattr(auth_backend, "verify_password", None)
+    if not callable(verify):
+        return False, "El módulo de autenticación necesita actualizarse. Reemplace auth.py por la versión incluida con V2.3.1."
+
+    normalized = str(username or "").strip().lower()
+    try:
+        records = list_managed_users()
+    except Exception:
+        return False, "No fue posible consultar la cuenta para validar la contraseña actual."
+
+    user_record = next((u for u in records if str(u.get("username", "")).strip().lower() == normalized), None)
+    if not user_record:
+        return False, "La cuenta debe estar administrada desde el panel para cambiar la contraseña desde aquí."
+
+    stored_hash = str(user_record.get("password_hash", ""))
+    if not current_password:
+        return False, "Ingrese su contraseña actual."
+    if not verify(current_password, stored_hash):
+        return False, "La contraseña actual no es correcta."
+    if verify(new_password, stored_hash):
+        return False, "La nueva contraseña debe ser diferente de la contraseña actual."
+
+    return set_managed_user_password(
+        normalized,
+        new_password,
+        updated_by=normalized,
+        force_change=False,
+    )
+
 
 st.set_page_config(
     page_title="Plataforma ERSI | VIHCA",
@@ -88,8 +132,8 @@ def render_admin_panel(user: dict) -> None:
         ]
     )
 
-    usuarios_tab, crear_tab, editar_tab, audit_tab = st.tabs(
-        ["Usuarios", "Crear usuario", "Editar / contraseña", "Bitácora"]
+    usuarios_tab, crear_tab, recuperar_tab, editar_tab, audit_tab = st.tabs(
+        ["Usuarios", "Crear usuario", "Recuperar acceso", "Editar usuario", "Bitácora"]
     )
 
     with usuarios_tab:
@@ -117,6 +161,17 @@ def render_admin_panel(user: dict) -> None:
             st.dataframe(df_users, width="stretch", hide_index=True)
         else:
             notice("Todavía no hay usuarios administrados desde la interfaz.", "info")
+
+        if admin_count < 2:
+            notice(
+                "Recomendación de recuperación: actualmente hay menos de dos administradores activos. Cree y verifique una cuenta de administrador de respaldo para evitar quedar sin acceso administrativo.",
+                "warning",
+            )
+        else:
+            notice(
+                f"Recuperación administrativa preparada: hay {admin_count} administradores activos.",
+                "success",
+            )
 
         if secret_users:
             st.write("")
@@ -289,6 +344,173 @@ def render_admin_panel(user: dict) -> None:
                 st.session_state.pop("last_created_password", None)
                 st.rerun()
 
+    with recuperar_tab:
+        section(
+            "Recuperar acceso de un usuario",
+            "Si una persona olvidó su contraseña, genere una contraseña temporal. El sistema le exigirá crear una contraseña personal nueva en su siguiente ingreso.",
+        )
+        notice(
+            "Por seguridad, la contraseña anterior no se puede consultar ni recuperar. El procedimiento correcto es restablecerla.",
+            "info",
+        )
+
+        current_managed = list_managed_users()
+        if not current_managed:
+            notice("No hay usuarios administrados disponibles para restablecer.", "warning")
+        else:
+            by_username = {u["username"]: u for u in current_managed}
+            recovery_usernames = list(by_username.keys())
+            recovery_username = st.selectbox(
+                "Usuario que necesita recuperar acceso",
+                recovery_usernames,
+                key="recovery_user_select",
+                format_func=lambda x: f"{x} — {by_username[x].get('display_name') or x}",
+            )
+            recovery_user = by_username[recovery_username]
+
+            # Evita reutilizar por accidente una contraseña temporal generada para
+            # otro usuario si el administrador cambia la selección.
+            if st.session_state.get("recovery_last_selected") != recovery_username:
+                st.session_state.recovery_last_selected = recovery_username
+                st.session_state.admin_recovery_password_input = ""
+                st.session_state.admin_recovery_confirm_input = ""
+                if st.session_state.get("last_reset_username") != recovery_username:
+                    st.session_state.pop("last_reset_password", None)
+
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                st.metric("País", recovery_user.get("pais") or "—")
+            with r2:
+                st.metric("Rol", {"admin": "Administrador", "coordinator": "Coordinador", "user": "Usuario"}.get(recovery_user.get("role"), recovery_user.get("role", "—")))
+            with r3:
+                st.metric("Estado", "Activo" if recovery_user.get("enabled") else "Inactivo")
+
+            if not recovery_user.get("enabled"):
+                notice("Este usuario está inactivo. Puede restablecer la contraseña, pero deberá activarlo en 'Editar usuario' para permitir el ingreso.", "warning")
+            if recovery_username.lower() == str(user.get("username", "")).lower():
+                notice("Está seleccionando su propia cuenta. Para un cambio normal use 'Mi cuenta'. Utilice este restablecimiento solo si desea generar una contraseña temporal.", "warning")
+
+            st.session_state.setdefault("admin_recovery_password_input", "")
+            st.session_state.setdefault("admin_recovery_confirm_input", "")
+            if st.button("Generar contraseña temporal segura", key="generate_recovery_password", width="stretch"):
+                generated = generate_secure_password()
+                st.session_state.admin_recovery_password_input = generated
+                st.session_state.admin_recovery_confirm_input = generated
+                st.rerun()
+
+            with st.form("recovery_password_form"):
+                reset_password = st.text_input(
+                    "Contraseña temporal nueva*",
+                    type="password",
+                    key="admin_recovery_password_input",
+                )
+                reset_confirm = st.text_input(
+                    "Confirmar contraseña temporal*",
+                    type="password",
+                    key="admin_recovery_confirm_input",
+                )
+                st.caption("El cambio de contraseña en el próximo inicio es obligatorio y no puede desactivarse en un restablecimiento.")
+                reset_submit = st.form_submit_button("Restablecer acceso", type="primary", width="stretch")
+
+            if reset_submit:
+                if reset_password != reset_confirm:
+                    st.error("Las contraseñas no coinciden.")
+                else:
+                    ok, message = set_managed_user_password(
+                        recovery_username,
+                        reset_password,
+                        updated_by=user["username"],
+                        force_change=True,
+                    )
+                    if ok:
+                        st.session_state.last_reset_username = recovery_username
+                        st.session_state.last_reset_password = reset_password
+                        st.success("Acceso restablecido. El usuario deberá cambiar esta contraseña temporal al ingresar.")
+                    else:
+                        st.error(message)
+
+            if (
+                st.session_state.get("last_reset_username") == recovery_username
+                and st.session_state.get("last_reset_password")
+            ):
+                notice(
+                    "Copie esta credencial temporal y entréguela únicamente a la persona correspondiente por un canal seguro. Después ocúltela de esta pantalla.",
+                    "warning",
+                )
+                st.code(
+                    f"Usuario: {recovery_username}\nContraseña temporal: {st.session_state.last_reset_password}",
+                    language="text",
+                )
+                if st.button("Ocultar credencial temporal", key="hide_recovery_credential"):
+                    st.session_state.pop("last_reset_username", None)
+                    st.session_state.pop("last_reset_password", None)
+                    st.session_state.admin_recovery_password_input = ""
+                    st.session_state.admin_recovery_confirm_input = ""
+                    st.rerun()
+
+        st.write("")
+        section(
+            "Administrador de respaldo",
+            "Mantenga una segunda cuenta administrativa verificada para recuperar la cuenta principal si el administrador habitual olvida su contraseña.",
+        )
+        current_managed = list_managed_users()
+        active_admins = [
+            u for u in current_managed
+            if u.get("enabled") and str(u.get("role", "")).lower() == "admin"
+        ]
+        backup_user = next((u for u in current_managed if str(u.get("username", "")).lower() == "admin_respaldo"), None)
+
+        if len(active_admins) >= 2:
+            notice(f"La plataforma tiene {len(active_admins)} administradores activos. Ya existe redundancia para recuperación.", "success")
+        else:
+            notice("Solo hay un administrador activo. Si esa cuenta pierde acceso, será necesario intervenir manualmente en Google Sheets/Secrets.", "warning")
+
+        if backup_user:
+            status = "Activo" if backup_user.get("enabled") else "Inactivo"
+            st.write(f"**Cuenta de respaldo:** `admin_respaldo` · **Estado:** {status}")
+            st.caption("Si necesita renovar su contraseña, selecciónela arriba en 'Recuperar acceso'.")
+            if not backup_user.get("enabled"):
+                notice("La cuenta de respaldo existe pero está inactiva. Actívela desde 'Editar usuario' antes de depender de ella para emergencias.", "warning")
+        else:
+            notice(
+                "Puede crear una cuenta `admin_respaldo`. Su contraseña temporal se mostrará una sola vez y deberá cambiarse al primer inicio.",
+                "info",
+            )
+            if st.button("Crear administrador de respaldo", type="primary", key="create_backup_admin", width="stretch"):
+                generated = generate_secure_password(18)
+                ok, message = create_managed_user(
+                    username="admin_respaldo",
+                    display_name="Administrador de respaldo",
+                    password=generated,
+                    pais="todos",
+                    role="admin",
+                    enabled=True,
+                    created_by=user["username"],
+                    must_change_password=True,
+                )
+                if ok:
+                    st.session_state.backup_admin_password = generated
+                    st.success("Administrador de respaldo creado. Guarde la credencial temporal y pruebe la cuenta antes de considerarla lista.")
+                else:
+                    st.error(message)
+
+        if st.session_state.get("backup_admin_password"):
+            notice(
+                "Credencial temporal de recuperación. No la envíe por correo grupal ni la almacene en el repositorio. Inicie sesión con `admin_respaldo` y establezca una contraseña personal antes de usarla como respaldo definitivo.",
+                "warning",
+            )
+            st.code(
+                f"Usuario: admin_respaldo\nContraseña temporal: {st.session_state.backup_admin_password}",
+                language="text",
+            )
+            if st.button("Ocultar credencial de respaldo", key="hide_backup_admin_password"):
+                st.session_state.pop("backup_admin_password", None)
+                st.rerun()
+
+        security_note(
+            "La cuenta de respaldo no es una puerta trasera: es una segunda cuenta Administrador normal, auditada y protegida con las mismas reglas de contraseña, bloqueo e inactividad."
+        )
+
     with editar_tab:
         section(
             "Editar usuario administrado",
@@ -300,7 +522,7 @@ def render_admin_panel(user: dict) -> None:
             notice("No hay usuarios administrados para editar. Cree uno o migre los usuarios de Secrets.", "info")
         else:
             by_username = {u["username"]: u for u in current_managed}
-            selected_username = st.selectbox("Seleccione un usuario", list(by_username.keys()))
+            selected_username = st.selectbox("Seleccione un usuario", list(by_username.keys()), key="edit_user_select")
             selected = by_username[selected_username]
             is_self = selected_username.lower() == str(user.get("username", "")).lower()
 
@@ -357,58 +579,6 @@ def render_admin_panel(user: dict) -> None:
                 else:
                     st.error(message)
 
-            st.write("")
-            section("Restablecer contraseña", "Genere una nueva contraseña temporal para el usuario seleccionado.")
-            st.session_state.setdefault("admin_reset_password_input", "")
-            st.session_state.setdefault("admin_reset_confirm_input", "")
-            if st.button("Generar nueva contraseña temporal"):
-                generated = generate_secure_password()
-                st.session_state.admin_reset_password_input = generated
-                st.session_state.admin_reset_confirm_input = generated
-                st.rerun()
-
-            with st.form("reset_password_form"):
-                reset_password = st.text_input(
-                    "Nueva contraseña",
-                    type="password",
-                    key="admin_reset_password_input",
-                )
-                reset_confirm = st.text_input(
-                    "Confirmar nueva contraseña",
-                    type="password",
-                    key="admin_reset_confirm_input",
-                )
-                require_change = st.checkbox("Solicitar cambio en el próximo inicio", value=True)
-                reset_submit = st.form_submit_button("Restablecer contraseña", type="primary", width="stretch")
-
-            if reset_submit:
-                if reset_password != reset_confirm:
-                    st.error("Las contraseñas no coinciden.")
-                else:
-                    ok, message = set_managed_user_password(
-                        selected_username,
-                        reset_password,
-                        updated_by=user["username"],
-                        force_change=require_change,
-                    )
-                    if ok:
-                        st.session_state.last_reset_username = selected_username
-                        st.session_state.last_reset_password = reset_password
-                        st.success(message)
-                    else:
-                        st.error(message)
-
-            if st.session_state.get("last_reset_username") == selected_username and st.session_state.get("last_reset_password"):
-                notice("Copie la contraseña temporal y entréguela al usuario por un canal seguro.", "warning")
-                st.code(
-                    f"Usuario: {selected_username}\nContraseña temporal: {st.session_state.last_reset_password}",
-                    language="text",
-                )
-                if st.button("Ocultar contraseña temporal restablecida"):
-                    st.session_state.pop("last_reset_username", None)
-                    st.session_state.pop("last_reset_password", None)
-                    st.rerun()
-
     with audit_tab:
         section(
             "Bitácora de actividad",
@@ -432,6 +602,64 @@ def render_admin_panel(user: dict) -> None:
 
     security_note("Las contraseñas reales nunca se almacenan en Google Sheets. Solo se conserva un hash no reversible con salt individual.")
     footer("Administración de usuarios")
+
+def render_account_panel(user: dict) -> None:
+    hero(
+        "Seguridad de la cuenta",
+        "Mi cuenta",
+        "Cambie su contraseña personal cuando lo necesite. Para proteger la cuenta, el sistema solicita confirmar la contraseña actual.",
+    )
+
+    role_label = {"admin": "Administrador", "coordinator": "Coordinador", "user": "Usuario"}.get(
+        str(user.get("role", "user")).lower(), str(user.get("role", "user"))
+    )
+    stats(
+        [
+            ("Usuario", user.get("username", "—")),
+            ("País", user.get("pais", "—")),
+            ("Rol", role_label),
+        ]
+    )
+
+    if user.get("source") != "managed":
+        notice(
+            "Esta cuenta todavía se administra desde Streamlit Secrets u otro proveedor. El cambio de contraseña desde la plataforma está disponible para cuentas migradas a USUARIOS_SISTEMA.",
+            "info",
+        )
+        footer("Mi cuenta")
+        return
+
+    section(
+        "Cambiar mi contraseña",
+        "Ingrese su contraseña actual y defina una nueva. La sesión permanecerá activa después del cambio.",
+    )
+    with st.form("voluntary_password_change"):
+        current_password = st.text_input("Contraseña actual", type="password")
+        new_password = st.text_input("Nueva contraseña", type="password")
+        confirm_password = st.text_input("Confirmar nueva contraseña", type="password")
+        submit_change = st.form_submit_button("Actualizar contraseña", type="primary", width="stretch")
+
+    if submit_change:
+        if new_password != confirm_password:
+            st.error("Las contraseñas nuevas no coinciden.")
+        else:
+            valid, message = validate_password_strength(new_password)
+            if not valid:
+                st.error(message)
+            else:
+                ok, message = change_password_with_current(
+                    user["username"], current_password, new_password
+                )
+                if ok:
+                    st.success("Contraseña actualizada correctamente. Utilice la nueva contraseña en su próximo ingreso.")
+                else:
+                    st.error(message)
+
+    security_note(
+        "La contraseña debe tener al menos 12 caracteres e incluir mayúscula, minúscula, número y símbolo. Nunca será visible para el administrador."
+    )
+    footer("Mi cuenta")
+
 
 settings = get_security_settings()
 user = current_user()
@@ -523,15 +751,22 @@ render_sidebar(user)
 with st.sidebar:
     st.divider()
     is_admin = str(user.get("role", "user")).lower() == "admin"
-    if is_admin:
-        if st.session_state.get("home_view") == "admin":
-            if st.button("← Volver al inicio", width="stretch"):
-                st.session_state.home_view = "home"
+    current_view = st.session_state.get("home_view", "home")
+
+    if current_view != "home":
+        if st.button("← Volver al inicio", width="stretch"):
+            st.session_state.home_view = "home"
+            st.rerun()
+    else:
+        if user.get("source") == "managed":
+            if st.button("🔐 Mi cuenta", width="stretch"):
+                st.session_state.home_view = "account"
                 st.rerun()
-        else:
+        if is_admin:
             if st.button("⚙️ Administrar usuarios", width="stretch"):
                 st.session_state.home_view = "admin"
                 st.rerun()
+
     if st.button("Cerrar sesión", width="stretch"):
         cerrar_sesion()
 
@@ -561,6 +796,11 @@ if user.get("must_change_password") and user.get("source") == "managed":
                 st.error(message)
     security_note("La nueva contraseña debe tener al menos 12 caracteres e incluir mayúscula, minúscula, número y símbolo. Debe ser diferente de la contraseña temporal.")
     footer("Plataforma ERSI")
+    st.stop()
+
+# Mi cuenta se renderiza en Home para evitar rutas adicionales.
+if st.session_state.get("home_view") == "account":
+    render_account_panel(user)
     st.stop()
 
 # La administración se renderiza dentro de Home para no depender de una página registrada por Streamlit.
