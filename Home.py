@@ -42,7 +42,7 @@ from auth import (
 
 
 def change_password_with_current(username: str, current_password: str, new_password: str) -> tuple[bool, str]:
-    """Compatibilidad V2.3.1 para cambio voluntario de contraseña.
+    """Compatibilidad V2.3.2 para cambio voluntario de contraseña.
 
     Usa el backend V2.3 cuando está disponible. Si Streamlit todavía carga
     un auth.py V2.2.x, aplica un fallback seguro con las funciones públicas
@@ -55,7 +55,7 @@ def change_password_with_current(username: str, current_password: str, new_passw
 
     verify = getattr(auth_backend, "verify_password", None)
     if not callable(verify):
-        return False, "El módulo de autenticación necesita actualizarse. Reemplace auth.py por la versión incluida con V2.3.1."
+        return False, "El módulo de autenticación necesita actualizarse. Reemplace auth.py por la versión incluida con V2.3.2."
 
     normalized = str(username or "").strip().lower()
     try:
@@ -115,7 +115,25 @@ def render_admin_panel(user: dict) -> None:
     ok_store, store_message = ensure_management_store()
     if not ok_store:
         notice(store_message, "danger")
-        security_note("El Service Account necesita permiso de edición sobre el Google Sheets configurado para poder administrar usuarios.")
+        security_note(
+            "La administración usa el mismo Google Sheets y el mismo Service Account del generador ERSI. "
+            "El mensaje anterior indica ahora la causa detectada; ya no se asume automáticamente que todo fallo sea un problema de permisos."
+        )
+        with st.expander("Comprobaciones rápidas"):
+            st.markdown(
+                """
+                1. Confirme que el generador ERSI todavía puede guardar un código en la hoja principal.
+                2. En Streamlit Secrets, conserve `google_sheets.spreadsheet_id` y `google_service_account`.
+                3. El `client_email` del Service Account debe estar compartido como **Editor** en ese archivo.
+                4. Si ya existen `USUARIOS_SISTEMA` o `AUDITORIA_SISTEMA`, no cambie manualmente sus encabezados.
+                """
+            )
+        if st.button("Reintentar conexión administrativa", type="primary", width="stretch"):
+            try:
+                auth_backend._google_spreadsheet.clear()
+            except Exception:
+                pass
+            st.rerun()
         footer("Administración")
         st.stop()
 

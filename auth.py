@@ -65,7 +65,10 @@ def _attempt_store():
 
 @st.cache_resource
 def _google_spreadsheet():
-    scope = ["https://www.googleapis.com/auth/spreadsheets"]
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
     creds = Credentials.from_service_account_info(
         dict(st.secrets["google_service_account"]),
         scopes=scope,
@@ -226,6 +229,11 @@ def _secret_user(username: str) -> dict | None:
 
 
 def _worksheet(title: str, create: bool = False, headers: list[str] | None = None):
+    """Abre o crea una hoja administrativa sin ocultar la causa real del fallo.
+
+    La aplicación ERSI ya usa Google Sheets + Drive. Aquí se reutiliza exactamente
+    la misma credencial y el mismo spreadsheet para evitar diferencias de permisos.
+    """
     try:
         book = _google_spreadsheet()
         try:
@@ -234,33 +242,102 @@ def _worksheet(title: str, create: bool = False, headers: list[str] | None = Non
             if not create:
                 return None
             ws = book.add_worksheet(title=title, rows=500, cols=max(12, len(headers or [])))
-            if headers:
-                ws.append_row(headers, value_input_option="RAW")
-            return ws
 
         if headers:
-            values = ws.row_values(1)
-            if not values:
-                ws.append_row(headers, value_input_option="RAW")
-            elif [str(v).strip() for v in values[: len(headers)]] != headers:
-                # No sobrescribe estructuras desconocidas. Fuerza una falla legible para no corromper datos.
-                raise ValueError(f"La hoja {title} existe pero no tiene la estructura esperada.")
+            values = [str(v).strip() for v in ws.row_values(1)]
+            expected = list(headers)
+
+            if not values or not any(values):
+                end_col = gspread.utils.rowcol_to_a1(1, len(expected)).rstrip("1")
+                ws.update(values=[expected], range_name=f"A1:{end_col}1")
+            elif values[: len(expected)] != expected:
+                # Si un intento previo dejó únicamente encabezados parciales y no hay
+                # registros, es seguro reparar la primera fila automáticamente.
+                all_values = ws.get_all_values()
+                nonempty_headers = [v for v in values if v]
+                only_header_row = len(all_values) <= 1
+                recognizable_partial = bool(nonempty_headers) and set(nonempty_headers).issubset(set(expected))
+                if only_header_row and recognizable_partial:
+                    end_col = gspread.utils.rowcol_to_a1(1, len(expected)).rstrip("1")
+                    ws.update(values=[expected], range_name=f"A1:{end_col}1")
+                else:
+                    raise ValueError(
+                        f"La hoja '{title}' ya existe, pero su fila de encabezados no corresponde "
+                        "a la estructura esperada por la aplicación."
+                    )
         return ws
     except Exception:
-        logger.exception("No fue posible abrir la hoja de gestión %s", title)
+        logger.exception("No fue posible abrir/preparar la hoja de gestión %s", title)
         if create:
             raise
         return None
 
 
+def _management_error_message(exc: Exception) -> str:
+    """Convierte errores de Google/gspread en mensajes útiles sin exponer secretos."""
+    name = type(exc).__name__
+    text = str(exc)
+
+    if isinstance(exc, KeyError):
+        return (
+            "La configuración de Google Sheets está incompleta en Streamlit Secrets. "
+            "Verifique las secciones google_service_account y google_sheets."
+        )
+
+    if isinstance(exc, ValueError):
+        return str(exc)
+
+    if name == "SpreadsheetNotFound":
+        return (
+            "No se encontró el Google Sheets configurado o el Service Account no tiene acceso al archivo. "
+            "Verifique el spreadsheet_id y que el correo client_email esté compartido como Editor."
+        )
+
+    status_code = None
+    response = getattr(exc, "response", None)
+    if response is not None:
+        status_code = getattr(response, "status_code", None)
+
+    if name == "APIError" or status_code:
+        if status_code == 403 or "PERMISSION_DENIED" in text or "403" in text:
+            return (
+                "Google rechazó la operación por permisos (403). El Service Account puede leer el archivo, "
+                "pero necesita permiso de Editor para crear o modificar las hojas USUARIOS_SISTEMA y AUDITORIA_SISTEMA."
+            )
+        if status_code == 404 or "404" in text:
+            return (
+                "Google no encontró el spreadsheet configurado (404). Revise el spreadsheet_id en Streamlit Secrets."
+            )
+        if status_code == 400 or "400" in text:
+            return (
+                "Google Sheets rechazó la operación (400). Revise si ya existen las hojas administrativas "
+                "con una estructura diferente."
+            )
+        return f"Google Sheets devolvió un error de API ({status_code or 'sin código'}). Revise los logs de Streamlit Cloud."
+
+    return f"No fue posible preparar la administración ({name}). Revise los logs de Streamlit Cloud para el detalle técnico."
+
+
 def ensure_management_store() -> tuple[bool, str]:
+    """Verifica acceso real al spreadsheet y prepara las hojas administrativas."""
     try:
+        # Primero comprobamos que el mismo archivo usado por ERSI sea accesible.
+        book = _google_spreadsheet()
+        try:
+            configured_main = str(st.secrets["google_sheets"].get("sheet_name", "")).strip()
+        except Exception:
+            configured_main = ""
+        if configured_main:
+            # No es obligatorio para la administración, pero confirma que estamos usando
+            # el mismo spreadsheet que el generador ERSI.
+            book.worksheet(configured_main)
+
         _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
         _worksheet(AUDIT_SHEET, create=True, headers=AUDIT_HEADERS)
         return True, "Las hojas de administración están listas."
-    except Exception:
-        return False, "No fue posible preparar las hojas de administración. Revise permisos del Service Account."
-
+    except Exception as exc:
+        logger.exception("No fue posible preparar el almacenamiento administrativo")
+        return False, _management_error_message(exc)
 
 def _rows_as_dicts(ws, headers: list[str]) -> list[dict]:
     values = ws.get_all_values()
