@@ -8,7 +8,7 @@ import streamlit as st
 
 ROOT_DIR = Path(__file__).resolve().parent
 LOGO_PATH = ROOT_DIR / "logo_vihca.png"
-APP_VERSION = "v2.3.0"
+APP_VERSION = "v2.2.4"
 
 
 def inject_global_styles() -> None:

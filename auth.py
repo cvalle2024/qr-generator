@@ -332,19 +332,6 @@ def list_managed_users() -> list[dict]:
     return sorted(result, key=lambda r: _normalize_username(r["username"]))
 
 
-def count_active_admins() -> int:
-    """Devuelve la cantidad de administradores administrados que están activos."""
-    try:
-        return sum(
-            1
-            for user in list_managed_users()
-            if user.get("enabled") and str(user.get("role", "")).lower() == "admin"
-        )
-    except Exception:
-        logger.exception("No fue posible contar administradores activos")
-        return 0
-
-
 def list_secret_users() -> list[dict]:
     result = []
     for key, raw in _users_section().items():
@@ -457,15 +444,6 @@ def update_managed_user(
         return False, "El usuario administrado no existe."
     if role not in {"admin", "coordinator", "user"}:
         return False, "Rol no válido."
-
-    # Protección de recuperación: nunca permitir dejar la plataforma sin un
-    # administrador activo. La validación se aplica también en backend para que
-    # no dependa únicamente de controles visuales de la interfaz.
-    currently_active_admin = bool(user.get("enabled")) and str(user.get("role", "")).lower() == "admin"
-    will_be_active_admin = bool(enabled) and role == "admin"
-    if currently_active_admin and not will_be_active_admin and count_active_admins() <= 1:
-        return False, "Debe existir al menos un administrador activo. Cree o active un administrador de respaldo antes de cambiar esta cuenta."
-
     user.update(
         {
             "display_name": " ".join(str(display_name).split()) or user["username"],
@@ -533,58 +511,6 @@ def change_own_password(username: str, new_password: str) -> tuple[bool, str]:
             user.get("pais", ""),
         )
     return ok, message
-
-
-def change_password_with_current(
-    username: str,
-    current_password: str,
-    new_password: str,
-) -> tuple[bool, str]:
-    """Cambia la contraseña propia comprobando primero la contraseña actual.
-
-    Se usa para el cambio voluntario desde *Mi cuenta*. El flujo de primer
-    acceso continúa utilizando ``change_own_password`` porque el usuario ya se
-    autenticó con la contraseña temporal antes de llegar a esa pantalla.
-    """
-    user = _managed_user(username)
-    if not user:
-        return False, "La cuenta debe estar administrada desde el panel para cambiar la contraseña desde aquí."
-    if not current_password:
-        return False, "Ingrese su contraseña actual."
-    if not verify_password(current_password, str(user.get("password_hash", ""))):
-        audit_event(
-            username,
-            "CAMBIO_PASSWORD_RECHAZADO",
-            "Mi cuenta",
-            "La contraseña actual no coincidió",
-            user.get("pais", ""),
-        )
-        return False, "La contraseña actual no es correcta."
-    if verify_password(new_password, str(user.get("password_hash", ""))):
-        return False, "La nueva contraseña debe ser diferente de la contraseña actual."
-
-    ok, message = validate_password_strength(new_password)
-    if not ok:
-        return False, message
-
-    user["password_hash"] = hash_password(new_password)
-    user["must_change_password"] = "false"
-    user["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    try:
-        _write_managed_row(int(user["_row_index"]), user)
-        if isinstance(st.session_state.get("auth_user"), dict):
-            st.session_state.auth_user["must_change_password"] = False
-        audit_event(
-            username,
-            "CAMBIAR_PASSWORD_PROPIO",
-            "Mi cuenta",
-            "Contraseña personal actualizada por el usuario",
-            user.get("pais", ""),
-        )
-        return True, "Contraseña actualizada correctamente."
-    except Exception:
-        logger.exception("No fue posible cambiar la contraseña propia de %s", username)
-        return False, "No fue posible actualizar la contraseña."
 
 
 def import_secret_users_to_managed(imported_by: str) -> tuple[int, int, str]:
