@@ -85,6 +85,57 @@ def _google_spreadsheet():
     return client.open_by_key(sheet_id)
 
 
+@st.cache_resource
+def _management_write_lock():
+    # Serializa escrituras administrativas dentro del mismo proceso de Streamlit.
+    return threading.RLock()
+
+
+@st.cache_resource
+def _validated_management_sheets():
+    # Evita volver a leer la fila de encabezados en cada rerun de Streamlit.
+    return set()
+
+
+def _api_status_code(exc: Exception) -> int | None:
+    response = getattr(exc, "response", None)
+    try:
+        return int(getattr(response, "status_code", 0) or 0) or None
+    except (TypeError, ValueError):
+        return None
+
+
+def _google_call(func, *, label: str = "Google Sheets"):
+    """Ejecuta una llamada a Google y reintenta solo cuando recibe HTTP 429.
+
+    Los reintentos son una red de seguridad para picos ocasionales. La reducción
+    principal de cuota se logra mediante caché y evitando lecturas repetidas.
+    """
+    delays = (2, 5, 10)
+    for attempt in range(len(delays) + 1):
+        try:
+            return func()
+        except Exception as exc:
+            if _api_status_code(exc) != 429 or attempt >= len(delays):
+                raise
+            wait_seconds = delays[attempt]
+            response = getattr(exc, "response", None)
+            try:
+                retry_after = int((getattr(response, "headers", {}) or {}).get("Retry-After", 0) or 0)
+                wait_seconds = max(wait_seconds, min(retry_after, 30))
+            except (TypeError, ValueError):
+                pass
+            logger.warning(
+                "%s respondió 429. Reintento %s/%s en %ss",
+                label,
+                attempt + 1,
+                len(delays),
+                wait_seconds,
+            )
+            time.sleep(wait_seconds)
+
+
+
 def _secret_section(name: str):
     try:
         return st.secrets[name]
@@ -229,42 +280,49 @@ def _secret_user(username: str) -> dict | None:
 
 
 def _worksheet(title: str, create: bool = False, headers: list[str] | None = None):
-    """Abre o crea una hoja administrativa sin ocultar la causa real del fallo.
-
-    La aplicación ERSI ya usa Google Sheets + Drive. Aquí se reutiliza exactamente
-    la misma credencial y el mismo spreadsheet para evitar diferencias de permisos.
-    """
+    """Abre o crea una hoja administrativa reduciendo llamadas repetidas a la API."""
     try:
         book = _google_spreadsheet()
         try:
-            ws = book.worksheet(title)
+            ws = _google_call(lambda: book.worksheet(title), label=f"Abrir hoja {title}")
         except gspread.WorksheetNotFound:
             if not create:
                 return None
-            ws = book.add_worksheet(title=title, rows=500, cols=max(12, len(headers or [])))
+            ws = _google_call(
+                lambda: book.add_worksheet(title=title, rows=500, cols=max(12, len(headers or []))),
+                label=f"Crear hoja {title}",
+            )
+            _validated_management_sheets().discard(title)
 
-        if headers:
-            values = [str(v).strip() for v in ws.row_values(1)]
+        # La estructura se valida una vez por proceso, no en cada interacción.
+        if headers and title not in _validated_management_sheets():
+            values = _google_call(lambda: ws.row_values(1), label=f"Leer encabezados {title}")
+            values = [str(v).strip() for v in values]
             expected = list(headers)
 
             if not values or not any(values):
                 end_col = gspread.utils.rowcol_to_a1(1, len(expected)).rstrip("1")
-                ws.update(values=[expected], range_name=f"A1:{end_col}1")
+                _google_call(
+                    lambda: ws.update(values=[expected], range_name=f"A1:{end_col}1"),
+                    label=f"Inicializar encabezados {title}",
+                )
             elif values[: len(expected)] != expected:
-                # Si un intento previo dejó únicamente encabezados parciales y no hay
-                # registros, es seguro reparar la primera fila automáticamente.
-                all_values = ws.get_all_values()
+                all_values = _google_call(lambda: ws.get_all_values(), label=f"Validar estructura {title}")
                 nonempty_headers = [v for v in values if v]
                 only_header_row = len(all_values) <= 1
                 recognizable_partial = bool(nonempty_headers) and set(nonempty_headers).issubset(set(expected))
                 if only_header_row and recognizable_partial:
                     end_col = gspread.utils.rowcol_to_a1(1, len(expected)).rstrip("1")
-                    ws.update(values=[expected], range_name=f"A1:{end_col}1")
+                    _google_call(
+                        lambda: ws.update(values=[expected], range_name=f"A1:{end_col}1"),
+                        label=f"Reparar encabezados {title}",
+                    )
                 else:
                     raise ValueError(
                         f"La hoja '{title}' ya existe, pero su fila de encabezados no corresponde "
                         "a la estructura esperada por la aplicación."
                     )
+            _validated_management_sheets().add(title)
         return ws
     except Exception:
         logger.exception("No fue posible abrir/preparar la hoja de gestión %s", title)
@@ -299,6 +357,12 @@ def _management_error_message(exc: Exception) -> str:
         status_code = getattr(response, "status_code", None)
 
     if name == "APIError" or status_code:
+        if status_code == 429 or "RESOURCE_EXHAUSTED" in text or "429" in text:
+            return (
+                "Google Sheets alcanzó temporalmente su límite de solicitudes (429). "
+                "Espere aproximadamente 60 segundos y vuelva a intentar. La versión optimizada "
+                "reduce lecturas repetidas y reintenta automáticamente los picos ocasionales."
+            )
         if status_code == 403 or "PERMISSION_DENIED" in text or "403" in text:
             return (
                 "Google rechazó la operación por permisos (403). El Service Account puede leer el archivo, "
@@ -318,29 +382,33 @@ def _management_error_message(exc: Exception) -> str:
     return f"No fue posible preparar la administración ({name}). Revise los logs de Streamlit Cloud para el detalle técnico."
 
 
-def ensure_management_store() -> tuple[bool, str]:
-    """Verifica acceso real al spreadsheet y prepara las hojas administrativas."""
+@st.cache_resource
+def _management_store_ready() -> bool:
+    # Esta comprobación es relativamente costosa; basta una vez por proceso.
+    book = _google_spreadsheet()
     try:
-        # Primero comprobamos que el mismo archivo usado por ERSI sea accesible.
-        book = _google_spreadsheet()
-        try:
-            configured_main = str(st.secrets["google_sheets"].get("sheet_name", "")).strip()
-        except Exception:
-            configured_main = ""
-        if configured_main:
-            # No es obligatorio para la administración, pero confirma que estamos usando
-            # el mismo spreadsheet que el generador ERSI.
-            book.worksheet(configured_main)
+        configured_main = str(st.secrets["google_sheets"].get("sheet_name", "")).strip()
+    except Exception:
+        configured_main = ""
+    if configured_main:
+        _google_call(lambda: book.worksheet(configured_main), label="Verificar hoja principal")
+    _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
+    _worksheet(AUDIT_SHEET, create=True, headers=AUDIT_HEADERS)
+    return True
 
-        _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
-        _worksheet(AUDIT_SHEET, create=True, headers=AUDIT_HEADERS)
+
+def ensure_management_store() -> tuple[bool, str]:
+    """Verifica acceso y prepara las hojas, sin repetir la comprobación en cada rerun."""
+    try:
+        _management_store_ready()
         return True, "Las hojas de administración están listas."
     except Exception as exc:
         logger.exception("No fue posible preparar el almacenamiento administrativo")
         return False, _management_error_message(exc)
 
+
 def _rows_as_dicts(ws, headers: list[str]) -> list[dict]:
-    values = ws.get_all_values()
+    values = _google_call(lambda: ws.get_all_values(), label=f"Leer datos {getattr(ws, 'title', 'hoja')}")
     if not values:
         return []
     actual_headers = [str(v).strip() for v in values[0]]
@@ -355,15 +423,36 @@ def _rows_as_dicts(ws, headers: list[str]) -> list[dict]:
     return rows
 
 
+@st.cache_data(ttl=30, show_spinner=False)
+def _managed_rows_snapshot() -> list[dict]:
+    ws = _worksheet(MANAGED_USERS_SHEET, create=False, headers=MANAGED_USER_HEADERS)
+    if ws is None:
+        return []
+    return _rows_as_dicts(ws, MANAGED_USER_HEADERS)
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _audit_rows_snapshot() -> list[dict]:
+    ws = _worksheet(AUDIT_SHEET, create=False, headers=AUDIT_HEADERS)
+    if ws is None:
+        return []
+    return _rows_as_dicts(ws, AUDIT_HEADERS)
+
+
+def _invalidate_management_caches(*, users: bool = True, audit: bool = False) -> None:
+    if users:
+        _managed_rows_snapshot.clear()
+    if audit:
+        _audit_rows_snapshot.clear()
+
+
+
 def _managed_user(username: str) -> dict | None:
     target = _normalize_username(username)
     if not target:
         return None
-    ws = _worksheet(MANAGED_USERS_SHEET, create=False, headers=MANAGED_USER_HEADERS)
-    if ws is None:
-        return None
     try:
-        for row in _rows_as_dicts(ws, MANAGED_USER_HEADERS):
+        for row in _managed_rows_snapshot():
             if _normalize_username(row.get("username", "")) != target:
                 continue
             return {
@@ -382,10 +471,7 @@ def _managed_user(username: str) -> dict | None:
 
 
 def list_managed_users() -> list[dict]:
-    ws = _worksheet(MANAGED_USERS_SHEET, create=False, headers=MANAGED_USER_HEADERS)
-    if ws is None:
-        return []
-    rows = _rows_as_dicts(ws, MANAGED_USER_HEADERS)
+    rows = _managed_rows_snapshot()
     result = []
     for row in rows:
         username = str(row.get("username", "")).strip()
@@ -443,32 +529,37 @@ def _write_managed_row(row_index: int, record: dict) -> None:
     ws = _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
     values = [[str(record.get(h, "")) for h in MANAGED_USER_HEADERS]]
     end_col = gspread.utils.rowcol_to_a1(1, len(MANAGED_USER_HEADERS)).rstrip("1")
-    ws.update(values=values, range_name=f"A{row_index}:{end_col}{row_index}")
+    with _management_write_lock():
+        _google_call(
+            lambda: ws.update(values=values, range_name=f"A{row_index}:{end_col}{row_index}"),
+            label="Actualizar usuario",
+        )
+    _invalidate_management_caches(users=True)
 
 
 def audit_event(username: str, action: str, module: str, detail: str = "", pais: str = "") -> None:
     try:
         ws = _worksheet(AUDIT_SHEET, create=True, headers=AUDIT_HEADERS)
-        ws.append_row(
-            [
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                str(username)[:80],
-                str(pais)[:80],
-                str(action)[:80],
-                str(module)[:80],
-                str(detail)[:300],
-            ],
-            value_input_option="RAW",
-        )
+        row = [
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            str(username)[:80],
+            str(pais)[:80],
+            str(action)[:80],
+            str(module)[:80],
+            str(detail)[:300],
+        ]
+        with _management_write_lock():
+            _google_call(
+                lambda: ws.append_row(row, value_input_option="RAW"),
+                label="Registrar auditoría",
+            )
+        _invalidate_management_caches(users=False, audit=True)
     except Exception:
         logger.exception("No fue posible registrar auditoría para accion=%s", action)
 
 
 def list_audit_events(limit: int = 200) -> list[dict]:
-    ws = _worksheet(AUDIT_SHEET, create=False, headers=AUDIT_HEADERS)
-    if ws is None:
-        return []
-    rows = _rows_as_dicts(ws, AUDIT_HEADERS)
+    rows = _audit_rows_snapshot()
     clean = [{k: r.get(k, "") for k in AUDIT_HEADERS} for r in rows]
     return list(reversed(clean[-max(1, min(limit, 1000)) :]))
 
@@ -512,7 +603,13 @@ def create_managed_user(
     }
     try:
         ws = _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
-        ws.append_row([record[h] for h in MANAGED_USER_HEADERS], value_input_option="RAW")
+        row = [record[h] for h in MANAGED_USER_HEADERS]
+        with _management_write_lock():
+            _google_call(
+                lambda: ws.append_row(row, value_input_option="RAW"),
+                label="Crear usuario",
+            )
+        _invalidate_management_caches(users=True)
         audit_event(created_by, "CREAR_USUARIO", "Administración", f"Usuario {normalized} creado", pais)
         return True, "Usuario creado correctamente."
     except Exception:
@@ -675,6 +772,7 @@ def import_secret_users_to_managed(imported_by: str) -> tuple[int, int, str]:
     ws = _worksheet(MANAGED_USERS_SHEET, create=True, headers=MANAGED_USER_HEADERS)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    pending_rows = []
     for username, raw in _users_section().items():
         normalized = _normalize_username(str(username))
         if normalized in existing:
@@ -688,8 +786,6 @@ def import_secret_users_to_managed(imported_by: str) -> tuple[int, int, str]:
             "pais": str(data.get("pais", "")),
             "role": str(data.get("role", "user")).strip().lower() or "user",
             "enabled": str(_normalize_bool(data.get("enabled", True), True)).lower(),
-            # Los usuarios heredados conservan la contraseña temporal segura ya
-            # configurada, pero deben crear una contraseña personal al primer acceso.
             "must_change_password": "true",
             "created_at": now,
             "created_by": f"import:{imported_by}",
@@ -699,9 +795,17 @@ def import_secret_users_to_managed(imported_by: str) -> tuple[int, int, str]:
         if not record["password_hash"]:
             skipped += 1
             continue
-        ws.append_row([record[h] for h in MANAGED_USER_HEADERS], value_input_option="RAW")
+        pending_rows.append([record[h] for h in MANAGED_USER_HEADERS])
         imported += 1
         existing.add(normalized)
+
+    if pending_rows:
+        with _management_write_lock():
+            _google_call(
+                lambda: ws.append_rows(pending_rows, value_input_option="RAW"),
+                label="Importar usuarios",
+            )
+        _invalidate_management_caches(users=True)
 
     audit_event(imported_by, "IMPORTAR_USUARIOS", "Administración", f"Importados={imported}; omitidos={skipped}")
     return imported, skipped, "Migración finalizada."

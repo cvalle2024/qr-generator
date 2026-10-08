@@ -42,7 +42,7 @@ from auth import (
 
 
 def change_password_with_current(username: str, current_password: str, new_password: str) -> tuple[bool, str]:
-    """Compatibilidad V2.3.2 para cambio voluntario de contraseña.
+    """Compatibilidad V2.3.3 para cambio voluntario de contraseña.
 
     Usa el backend V2.3 cuando está disponible. Si Streamlit todavía carga
     un auth.py V2.2.x, aplica un fallback seguro con las funciones públicas
@@ -55,7 +55,7 @@ def change_password_with_current(username: str, current_password: str, new_passw
 
     verify = getattr(auth_backend, "verify_password", None)
     if not callable(verify):
-        return False, "El módulo de autenticación necesita actualizarse. Reemplace auth.py por la versión incluida con V2.3.2."
+        return False, "El módulo de autenticación necesita actualizarse. Reemplace auth.py por la versión incluida con V2.3.3."
 
     normalized = str(username or "").strip().lower()
     try:
@@ -129,8 +129,19 @@ def render_admin_panel(user: dict) -> None:
                 """
             )
         if st.button("Reintentar conexión administrativa", type="primary", width="stretch"):
+            # Limpia únicamente cachés técnicas; no borra usuarios ni contraseñas.
+            for cache_name in (
+                "_management_store_ready",
+                "_managed_rows_snapshot",
+                "_audit_rows_snapshot",
+                "_google_spreadsheet",
+            ):
+                try:
+                    getattr(auth_backend, cache_name).clear()
+                except Exception:
+                    pass
             try:
-                auth_backend._google_spreadsheet.clear()
+                auth_backend._validated_management_sheets().clear()
             except Exception:
                 pass
             st.rerun()
